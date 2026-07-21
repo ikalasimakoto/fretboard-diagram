@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fretboard Diagram Editor</title>
+    <link rel="stylesheet" href="/gui/styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <h1>Fretboard Diagram Editor</h1>
+      <p class="hint">Click the board to place notes. Everything renders live from the JSON spec.</p>
+    </header>
+
+    <main class="layout">
+      <!-- Controls -->
+      <section class="panel" aria-label="Controls">
+        <h2>Setup</h2>
+
+        <label class="field">
+          <span>Title</span>
+          <input id="title" type="text" placeholder="e.g. C major — open position" />
+        </label>
+        <label class="field">
+          <span>Tags (comma-separated)</span>
+          <input id="tags" type="text" placeholder="scale, C major, ionian" />
+        </label>
+
+        <h3>Tuning</h3>
+        <label class="field">
+          <span>Preset</span>
+          <select id="tuning-preset"></select>
+        </label>
+        <label class="field">
+          <span>Name (shown on image)</span>
+          <input id="tuning-name" type="text" />
+        </label>
+        <div id="tuning-strings" class="tuning-strings"></div>
+        <div class="row">
+          <button id="add-string" type="button" class="ghost">+ string (treble)</button>
+          <button id="remove-string" type="button" class="ghost">− string</button>
+        </div>
+
+        <h3>Frets</h3>
+        <div class="row">
+          <label class="field small"><span>From</span><input id="fret-from" type="number" min="0" max="24" /></label>
+          <label class="field small"><span>To</span><input id="fret-to" type="number" min="1" max="24" /></label>
+        </div>
+        <label class="check"><input id="show-fretnum" type="checkbox" /> Show fret number</label>
+        <label class="check"><input id="show-inlay" type="checkbox" /> Show inlays</label>
+        <label class="field small"><span>Capo (0 = none)</span><input id="capo" type="number" min="0" max="24" /></label>
+
+        <h3>Labels</h3>
+        <label class="field">
+          <span>Show</span>
+          <select id="notation-type">
+            <option value="note">Note names</option>
+            <option value="interval">Intervals</option>
+            <option value="none">Nothing</option>
+          </select>
+        </label>
+        <label class="field" id="acc-field">
+          <span>Accidentals</span>
+          <select id="accidentals">
+            <option value="sharp">Sharps (#)</option>
+            <option value="flat">Flats (♭)</option>
+          </select>
+        </label>
+
+        <h3>Root</h3>
+        <label class="field">
+          <span>Mode</span>
+          <select id="root-mode">
+            <option value="pitchClass">By note (pitch class)</option>
+            <option value="position">By position (mark on board)</option>
+            <option value="null">None</option>
+          </select>
+        </label>
+        <label class="field" id="root-value-field">
+          <span>Root note</span>
+          <select id="root-value"></select>
+        </label>
+        <p class="hint" id="root-hint"></p>
+      </section>
+
+      <!-- Board editor -->
+      <section class="panel board-panel" aria-label="Board editor">
+        <h2>Board</h2>
+        <p class="hint">Fretted cell: click cycles empty → note → root → empty. Open column: empty → open → mute → empty.</p>
+        <div id="board-editor" class="board-editor"></div>
+      </section>
+
+      <!-- Preview + export -->
+      <section class="panel" aria-label="Preview">
+        <h2>Preview</h2>
+        <div id="preview" class="preview"></div>
+
+        <h3>Export</h3>
+        <div class="row">
+          <label class="field small"><span>Scale</span>
+            <select id="export-scale"><option value="1">1×</option><option value="2" selected>2×</option><option value="4">4×</option></select>
+          </label>
+        </div>
+        <div class="row wrap">
+          <button id="dl-svg" type="button">Download SVG</button>
+          <button id="dl-png" type="button">Download PNG</button>
+          <button id="dl-jpg" type="button">Download JPEG</button>
+        </div>
+
+        <h3>JSON spec</h3>
+        <div class="row wrap">
+          <button id="copy-json" type="button" class="ghost">Copy</button>
+          <button id="load-json" type="button" class="ghost">Load from box</button>
+        </div>
+        <textarea id="json" class="json" spellcheck="false" rows="12"></textarea>
+      </section>
+    </main>
+
+    <script type="module" src="/gui/main.ts"></script>
+  </body>
+</html>

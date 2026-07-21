@@ -16,6 +16,18 @@ SVG is the primary output: vector, crisp at any size, and convertible to PNG/JPE
 
 ## Usage
 
+### GUI (editor)
+
+```
+npm install     # first time only
+npm run dev     # opens a local web app (Vite) at http://localhost:5173
+```
+
+The editor builds a spec and calls the same rendering core; it has no drawing
+logic of its own. Export to SVG / PNG / JPEG, and copy/load the JSON spec.
+
+### Headless (core only)
+
 Node 24+ runs the TypeScript sources directly (no build step).
 
 ```
@@ -29,7 +41,7 @@ import { renderSvg } from "./src/index.ts";
 const svg = renderSvg(spec);   // spec: Diagram
 ```
 
-Type-check (optional; needs `npm install`):
+Type-check (optional):
 
 ```
 npm run typecheck
@@ -57,12 +69,22 @@ See `src/types.ts` for the authoritative definition. Key fields:
 - Inlays: single at 3/5/7/9/15/17/19/21, double at 12/24, light gray.
 - Leftmost fret number; capo bar.
 
+## GUI
+
+`index.html` + `gui/` is a dependency-light local web app (Vite + vanilla TS).
+Three panels: setup controls, an interactive board, and a live preview with
+export. See `gui/main.ts`.
+
 ## Roadmap
 
 - Capo: reinterpret open-string markers relative to the capo (× at capo position).
 - Groups: outline a set of markers with a thick polygon (chord/position shapes).
-- Per-note color presets; richer styling.
-- PNG/JPEG export at selectable resolution (rasterize the SVG).
+- Per-note color presets and per-pitch-class spelling UI; richer styling.
 - Diagram library: save, tag (chord/scale/mode/tuning/keywords), and recall.
-- Local web GUI.
 - Vertical layout option (data spec is already orientation-neutral).
+
+## Done
+
+- Rendering core (JSON → SVG); music-theory module.
+- Local web GUI with interactive board and live preview.
+- PNG / JPEG / SVG export at selectable resolution.
