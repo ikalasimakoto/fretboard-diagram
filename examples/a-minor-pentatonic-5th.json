@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "meta": {
+    "title": "A minor pentatonic — position 1 (intervals)",
+    "tags": ["scale", "A minor pentatonic", "position 1", "standard tuning"]
+  },
+  "tuning": {
+    "name": "Standard",
+    "strings": ["E2", "A2", "D3", "G3", "B3", "E4"]
+  },
+  "frets": { "from": 5, "to": 8, "showFretNumber": true, "showInlay": true },
+  "root": { "mode": "pitchClass", "value": "A" },
+  "notation": { "type": "interval" },
+  "markers": [
+    { "string": 0, "fret": 5 },
+    { "string": 0, "fret": 8 },
+    { "string": 1, "fret": 5 },
+    { "string": 1, "fret": 7 },
+    { "string": 2, "fret": 5 },
+    { "string": 2, "fret": 7 },
+    { "string": 3, "fret": 5 },
+    { "string": 3, "fret": 7 },
+    { "string": 4, "fret": 5 },
+    { "string": 4, "fret": 8 },
+    { "string": 5, "fret": 5 },
+    { "string": 5, "fret": 8 }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "meta": {
+    "title": "C major scale — open position",
+    "tags": ["scale", "C major", "ionian", "standard tuning"]
+  },
+  "tuning": {
+    "name": "Standard",
+    "strings": ["E2", "A2", "D3", "G3", "B3", "E4"]
+  },
+  "frets": { "from": 0, "to": 3, "showFretNumber": true, "showInlay": true },
+  "root": { "mode": "pitchClass", "value": "C" },
+  "notation": { "type": "note", "accidentals": "sharp" },
+  "markers": [
+    { "string": 0, "fret": 0, "type": "open" },
+    { "string": 0, "fret": 1 },
+    { "string": 0, "fret": 3 },
+    { "string": 1, "fret": 0, "type": "open" },
+    { "string": 1, "fret": 2 },
+    { "string": 1, "fret": 3 },
+    { "string": 2, "fret": 0, "type": "open" },
+    { "string": 2, "fret": 2 },
+    { "string": 2, "fret": 3 },
+    { "string": 3, "fret": 0, "type": "open" },
+    { "string": 3, "fret": 2 },
+    { "string": 4, "fret": 0, "type": "open" },
+    { "string": 4, "fret": 1 },
+    { "string": 4, "fret": 3 },
+    { "string": 5, "fret": 0, "type": "open" },
+    { "string": 5, "fret": 1 },
+    { "string": 5, "fret": 3 }
+  ]
+}

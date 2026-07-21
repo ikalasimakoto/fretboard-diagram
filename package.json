@@ -1,0 +1,14 @@
+{
+  "name": "fretboard-diagram",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Guitar fretboard diagram generator. A GUI-independent core renders a JSON diagram spec to SVG, so the same core can be driven by a future web GUI or headlessly (e.g. by an AI) to produce practice/article/video assets.",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "example": "node examples/render-example.ts"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0"
+  }
+}
