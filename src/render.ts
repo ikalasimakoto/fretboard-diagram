@@ -13,11 +13,13 @@ interface Style {
   marginTop: number;
   marginLeft: number;
   marginRight: number;
-  titleZone: number;
   openZone: number;
-  bottomZone: number;
   nutGap: number;
+  openGap: number;
   overhang: number;
+  topGap: number;
+  bottomGap: number;
+  minTitleWidth: number;
   background: "transparent" | "white";
   lineColor: string;
   dotColor: string;
@@ -31,14 +33,16 @@ const DEFAULTS: Style = {
   fretSpacing: 58,
   stringSpacing: 34,
   noteRadius: 12,
-  marginTop: 14,
+  marginTop: 16,
   marginLeft: 16,
   marginRight: 24,
-  titleZone: 46,
-  openZone: 34,
-  bottomZone: 34,
+  openZone: 42,
   nutGap: 4,
+  openGap: 6,
   overhang: 12,
+  topGap: 12,
+  bottomGap: 14,
+  minTitleWidth: 260,
   background: "transparent",
   lineColor: "#222222",
   dotColor: "#222222",
@@ -48,6 +52,12 @@ const DEFAULTS: Style = {
   font: "system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif",
 };
 
+const TITLE_SIZE = 18;
+const TITLE_LINE_H = 24;
+const TITLE_CHAR_W = 10.2; // rough px/char for the title font
+const CAPTION_SIZE = 12;
+const CAPTION_CHAR_W = 6.7;
+
 /** Frets that carry inlay dots, and which are doubled. */
 const SINGLE_INLAYS = new Set([3, 5, 7, 9, 15, 17, 19, 21]);
 const DOUBLE_INLAYS = new Set([12, 24]);
@@ -56,8 +66,26 @@ function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+/** Greedily wrap text to a max pixel width (best-effort; single long words are not split). */
+function wrapText(text: string, maxWidth: number, charW: number): string[] {
+  const words = text.split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let cur = "";
+  for (const w of words) {
+    const trial = cur ? `${cur} ${w}` : w;
+    if (!cur || trial.length * charW <= maxWidth) {
+      cur = trial;
+    } else {
+      lines.push(cur);
+      cur = w;
+    }
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
+
 export function renderSvg(d: Diagram, styleIn?: Partial<Style>): string {
-  const S: Style = { ...DEFAULTS, ...(mapStyleOverrides(d)), ...(styleIn ?? {}) };
+  const S: Style = { ...DEFAULTS, ...mapStyleOverrides(d), ...(styleIn ?? {}) };
 
   const strings = d.tuning.strings;
   const n = strings.length;
@@ -72,53 +100,77 @@ export function renderSvg(d: Diagram, styleIn?: Partial<Style>): string {
   const boardH = (n - 1) * S.stringSpacing;
 
   const originX = S.marginLeft + S.openZone;
-  const originY = S.marginTop + S.titleZone;
-  const totalW = originX + boardW + S.marginRight;
-  const totalH = originY + boardH + S.bottomZone;
+  const boardTotalW = originX + boardW + S.marginRight;
 
-  // Geometry helpers.
+  // --- Header layout (title wraps; caption on its own line) ---
+  const title = d.meta?.title;
+  const availTitleW = Math.max(boardTotalW - S.marginLeft - S.marginRight, S.minTitleWidth);
+  const titleLines = title ? wrapText(title, availTitleW, TITLE_CHAR_W) : [];
+  const captionText = `Tuning: ${d.tuning.name} (${strings.join(" ")})`;
+
+  const firstBaseline = S.marginTop + TITLE_SIZE;
+  const captionBaseline =
+    titleLines.length > 0
+      ? firstBaseline + (titleLines.length - 1) * TITLE_LINE_H + 20
+      : firstBaseline;
+
+  // Widen the canvas if a title line or the caption is wider than the board.
+  const widestHeaderPx = Math.max(
+    captionText.length * CAPTION_CHAR_W,
+    ...titleLines.map((l) => l.length * TITLE_CHAR_W),
+    0,
+  );
+  const totalW = Math.ceil(Math.max(boardTotalW, S.marginLeft + widestHeaderPx + S.marginRight));
+
+  // Board top leaves room so the top row of notes clears the caption.
+  const originY = captionBaseline + S.noteRadius + S.topGap;
+  const fretNumBaseline = originY + boardH + S.noteRadius + S.bottomGap;
+  const totalH = showFretNumber ? fretNumBaseline + 12 : originY + boardH + S.noteRadius + 12;
+
+  // --- Geometry helpers ---
   const xWire = (k: number) => originX + (k - leftWire) * S.fretSpacing;
   const xFret = (f: number) => xWire(f) - S.fretSpacing / 2; // center of fret f's space
   const yString = (i: number) => originY + (n - 1 - i) * S.stringSpacing; // i=0 at bottom
 
   const parts: string[] = [];
 
-  // Background.
   if (S.background === "white") {
     parts.push(`<rect x="0" y="0" width="${totalW}" height="${totalH}" fill="#ffffff"/>`);
   }
 
-  // Title + tuning caption.
-  const title = d.meta?.title;
-  if (title) {
+  // Title (possibly multi-line) + tuning caption.
+  titleLines.forEach((line, i) => {
     parts.push(
-      `<text x="${S.marginLeft}" y="${S.marginTop + 18}" font-family="${S.font}" ` +
-        `font-size="18" font-weight="600" fill="${S.lineColor}">${esc(title)}</text>`,
+      `<text x="${S.marginLeft}" y="${firstBaseline + i * TITLE_LINE_H}" font-family="${S.font}" ` +
+        `font-size="${TITLE_SIZE}" font-weight="600" fill="${S.lineColor}">${esc(line)}</text>`,
     );
-  }
-  const tuningCaption = `Tuning: ${d.tuning.name} (${strings.join(" ")})`;
+  });
   parts.push(
-    `<text x="${S.marginLeft}" y="${S.marginTop + (title ? 38 : 20)}" font-family="${S.font}" ` +
-      `font-size="12" fill="#666666">${esc(tuningCaption)}</text>`,
+    `<text x="${S.marginLeft}" y="${captionBaseline}" font-family="${S.font}" ` +
+      `font-size="${CAPTION_SIZE}" fill="#666666">${esc(captionText)}</text>`,
   );
 
-  // Inlays (behind everything on the board).
-  if (showInlay) {
+  // Inlays (behind the board).
+  if (showInlay && n >= 2) {
+    // The gap to draw in: for even string counts this is the centre gap; for
+    // odd counts it is the gap between the middle string and the next string
+    // toward the treble side (avoids sitting on a string, under the notes).
+    const mLow = Math.floor(n / 2) - (n % 2 === 0 ? 1 : 0);
+    const singleY = (yString(mLow) + yString(mLow + 1)) / 2;
     const firstPlayable = from === 0 ? 1 : from;
     for (let f = firstPlayable; f <= to; f++) {
       const cx = xFret(f);
       if (DOUBLE_INLAYS.has(f)) {
-        parts.push(inlayDot(cx, originY + boardH / 3, S));
-        parts.push(inlayDot(cx, originY + (2 * boardH) / 3, S));
+        parts.push(inlayDot(cx, singleY - S.stringSpacing, S));
+        parts.push(inlayDot(cx, singleY + S.stringSpacing, S));
       } else if (SINGLE_INLAYS.has(f)) {
-        parts.push(inlayDot(cx, originY + boardH / 2, S));
+        parts.push(inlayDot(cx, singleY, S));
       }
     }
   }
 
-  // Strings (horizontal lines). Overhang left when the nut is off-screen.
-  const stringLeft =
-    from === 0 ? originX - S.nutGap : originX - S.overhang;
+  // Strings (horizontal). Overhang left when the nut is off-screen.
+  const stringLeft = from === 0 ? originX - S.nutGap : originX - S.overhang;
   const stringRight = xWire(to);
   for (let i = 0; i < n; i++) {
     const y = yString(i);
@@ -128,12 +180,11 @@ export function renderSvg(d: Diagram, styleIn?: Partial<Style>): string {
     );
   }
 
-  // Fret wires (vertical lines); the nut is a double line.
+  // Fret wires (vertical). Nut is a double line.
   const yTop = yString(n - 1);
   const yBot = yString(0);
   for (let k = leftWire; k <= to; k++) {
     if (from === 0 && k === 0) {
-      // Nut: double line.
       parts.push(vline(originX, yTop, yBot, S.lineColor, 2));
       parts.push(vline(originX - S.nutGap, yTop, yBot, S.lineColor, 2));
     } else {
@@ -141,12 +192,12 @@ export function renderSvg(d: Diagram, styleIn?: Partial<Style>): string {
     }
   }
 
-  // Fret number of the leftmost fret space only.
+  // Leftmost fret number only.
   if (showFretNumber) {
     const leftmost = from === 0 ? 1 : from;
     parts.push(
-      `<text x="${xFret(leftmost)}" y="${originY + boardH + 20}" text-anchor="middle" ` +
-        `font-family="${S.font}" font-size="12" fill="#666666">${leftmost}</text>`,
+      `<text x="${xFret(leftmost)}" y="${fretNumBaseline}" text-anchor="middle" ` +
+        `font-family="${S.font}" font-size="${CAPTION_SIZE}" fill="#666666">${leftmost}</text>`,
     );
   }
 
@@ -157,22 +208,20 @@ export function renderSvg(d: Diagram, styleIn?: Partial<Style>): string {
     const w = S.noteRadius * 1.3;
     parts.push(
       `<rect x="${cx - w / 2}" y="${yTop - S.overhang}" width="${w}" ` +
-        `height="${boardH + 2 * S.overhang}" rx="${w / 2}" ` +
-        `fill="${S.lineColor}" opacity="0.85"/>`,
+        `height="${boardH + 2 * S.overhang}" rx="${w / 2}" fill="${S.lineColor}" opacity="0.85"/>`,
     );
   }
 
-  // Root pitch class (for pitchClass mode and interval labels).
   const rootPc = resolveRootPc(d);
 
   // Markers.
+  const openCx = (originX - S.nutGap) - S.openGap - S.noteRadius; // gap from the nut line
   for (const m of d.markers) {
     if (m.string < 0 || m.string >= n) continue;
     const openPc = pitchClassOf(strings[m.string]);
     const pc = (openPc + m.fret) % 12;
     const y = yString(m.string);
 
-    // Skip fretted markers outside the window or left of a capo.
     if (m.fret > 0) {
       if (m.fret < from || m.fret > to) continue;
       if (capoFret != null && m.fret < capoFret) continue;
@@ -183,18 +232,15 @@ export function renderSvg(d: Diagram, styleIn?: Partial<Style>): string {
     const fill = m.color ?? (isRoot ? S.rootColor : S.dotColor);
 
     if (m.fret === 0) {
-      // Open-string markers only make sense when the nut is shown.
-      if (from !== 0) continue;
-      const cx = S.marginLeft + S.openZone / 2;
+      if (from !== 0) continue; // open strings only meaningful with the nut shown
       if (m.type === "mute") {
-        parts.push(muteMark(cx, y, S));
+        parts.push(muteMark(openCx, y, S));
       } else {
-        parts.push(openRing(cx, y, label, isRoot, S));
+        parts.push(openRing(openCx, y, label, isRoot, S));
       }
       continue;
     }
 
-    // Fretted dot.
     const cx = xFret(m.fret);
     if (isRoot) {
       parts.push(
@@ -203,9 +249,7 @@ export function renderSvg(d: Diagram, styleIn?: Partial<Style>): string {
       );
     }
     parts.push(`<circle cx="${cx}" cy="${y}" r="${S.noteRadius}" fill="${fill}"/>`);
-    if (label) {
-      parts.push(dotText(cx, y, label, S.textOnDot, S));
-    }
+    if (label) parts.push(dotText(cx, y, label, S.textOnDot, S));
   }
 
   const svgOpen =
@@ -238,24 +282,14 @@ function resolveRootPc(d: Diagram): number | null {
   return null;
 }
 
-function markerIsRoot(
-  d: Diagram,
-  m: Marker,
-  pc: number,
-  rootPc: number | null,
-): boolean {
+function markerIsRoot(d: Diagram, m: Marker, pc: number, rootPc: number | null): boolean {
   const mode = d.root?.mode;
   if (mode === "pitchClass" && rootPc != null) return pc === rootPc;
   if (mode === "position") return m.root === true;
   return m.root === true;
 }
 
-function markerLabel(
-  d: Diagram,
-  m: Marker,
-  pc: number,
-  rootPc: number | null,
-): string {
+function markerLabel(d: Diagram, m: Marker, pc: number, rootPc: number | null): string {
   if (m.label != null) return m.label;
   const not = d.notation ?? { type: "note" as const };
   if (not.type === "none") return "";
