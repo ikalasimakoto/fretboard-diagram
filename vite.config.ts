@@ -6,6 +6,7 @@ import {
   unlinkSync,
   mkdirSync,
   existsSync,
+  statSync,
 } from "node:fs";
 import { join } from "node:path";
 
@@ -50,13 +51,18 @@ function libraryApi(): Plugin {
             const diagram = JSON.parse(body);
             const path = join(dir, `${idMatch[1]}.json`);
             const now = new Date().toISOString();
-            // Preserve the original creation time across updates.
+            // Preserve the original creation time across updates. For records
+            // saved before createdAt existed, fall back to their previous
+            // savedAt (then the file's birth time) — never bump it to now, or
+            // an update would make the diagram look freshly created.
             let createdAt = now;
             if (existsSync(path)) {
               try {
-                createdAt = JSON.parse(readFileSync(path, "utf8")).createdAt ?? now;
+                const prev = JSON.parse(readFileSync(path, "utf8"));
+                createdAt =
+                  prev.createdAt ?? prev.savedAt ?? statSync(path).birthtime.toISOString();
               } catch {
-                /* fall back to now */
+                createdAt = statSync(path).birthtime.toISOString();
               }
             }
             const record = { id: idMatch[1], createdAt, savedAt: now, diagram };
