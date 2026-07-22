@@ -75,12 +75,19 @@ See `src/types.ts` for the authoritative definition. Key fields:
 Three panels: setup controls, an interactive board, and a live preview with
 export. See `gui/main.ts`.
 
+## Library
+
+Diagrams are saved as JSON files under `library/` (one file per diagram:
+`{ id, savedAt, diagram }`). The GUI reads/writes them through a small dev-server
+API (`vite.config.ts`), so the library is durable on disk, git-friendly, and
+readable/writable by an AI — not trapped in browser storage. Filter by title,
+tag, or tuning; load or delete from the panel.
+
 ## Roadmap
 
 - Capo: reinterpret open-string markers relative to the capo (× at capo position).
 - Groups: outline a set of markers with a thick polygon (chord/position shapes).
 - Per-note color presets and per-pitch-class spelling UI; richer styling.
-- Diagram library: save, tag (chord/scale/mode/tuning/keywords), and recall.
 - Vertical layout option (data spec is already orientation-neutral).
 
 ## Done
@@ -88,3 +95,4 @@ export. See `gui/main.ts`.
 - Rendering core (JSON → SVG); music-theory module.
 - Local web GUI with interactive board and live preview.
 - PNG / JPEG / SVG export at selectable resolution.
+- Diagram library: save, tag (chord/scale/mode/tuning/keywords), filter, recall.

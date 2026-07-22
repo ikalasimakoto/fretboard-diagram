@@ -114,6 +114,20 @@
         </div>
         <textarea id="json" class="json" spellcheck="false" rows="12"></textarea>
       </section>
+
+      <!-- Library -->
+      <section class="panel library-panel" aria-label="Library">
+        <div class="panel-head">
+          <h2>Library</h2>
+          <div class="row">
+            <button id="lib-save" type="button" class="ghost">Save / update</button>
+            <button id="lib-save-new" type="button" class="ghost">Save as new</button>
+          </div>
+        </div>
+        <input id="lib-search" type="search" placeholder="Filter by title, tag, or tuning…" />
+        <div id="lib-list" class="lib-list"></div>
+        <p class="hint" id="lib-status">Saved diagrams are stored as JSON files in <code>library/</code>.</p>
+      </section>
     </main>
 
     <script type="module" src="/gui/main.ts"></script>

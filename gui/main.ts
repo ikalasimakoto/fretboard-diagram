@@ -6,6 +6,13 @@
 import { renderSvg } from "../src/render.ts";
 import { pitchClassOf } from "../src/theory.ts";
 import type { Diagram } from "../src/types.ts";
+import {
+  listLibrary,
+  saveLibrary,
+  deleteLibrary,
+  makeId,
+  type StoredDiagram,
+} from "./library.ts";
 
 const TUNING_PRESETS: Record<string, string[]> = {
   Standard: ["E2", "A2", "D3", "G3", "B3", "E4"],
@@ -134,6 +141,24 @@ function syncControls(): void {
 function renderAll(): void {
   $("preview").innerHTML = renderSvg(state, { interactive: true });
   $<HTMLTextAreaElement>("json").value = JSON.stringify(state, null, 2);
+}
+
+/** Replace the working diagram (from JSON paste or the library) and refresh the UI. */
+function loadDiagram(d: Diagram): void {
+  const src = structuredClone(d);
+  state.version = src.version ?? 1;
+  state.meta = src.meta ?? { title: "", tags: [] };
+  state.tuning = src.tuning;
+  state.frets = src.frets;
+  state.capo = src.capo ?? null;
+  state.root = src.root ?? { mode: "pitchClass", value: "C" };
+  state.notation = src.notation ?? { type: "note", accidentals: "sharp" };
+  state.markers = src.markers ?? [];
+  state.style = src.style;
+  buildTuningEditor();
+  buildRootValueOptions();
+  syncControls();
+  renderAll();
 }
 
 // ---------- Export ----------
@@ -319,15 +344,129 @@ function initControls(): void {
   $("load-json").addEventListener("click", () => {
     try {
       const parsed = JSON.parse($<HTMLTextAreaElement>("json").value) as Diagram;
-      Object.assign(state, parsed);
-      buildTuningEditor();
-      buildRootValueOptions();
-      syncControls();
-      renderAll();
+      loadDiagram(parsed);
+      currentId = null; // pasted JSON is a fresh, unsaved diagram
     } catch (err) {
       alert(`Invalid JSON: ${(err as Error).message}`);
     }
   });
+
+  initLibrary();
+}
+
+// ---------- Library (save / tag / recall) ----------
+
+let currentId: string | null = null;
+let libraryCache: StoredDiagram[] = [];
+
+function matchesFilter(it: StoredDiagram, q: string): boolean {
+  if (!q) return true;
+  const d = it.diagram;
+  const hay = [d.meta?.title, d.tuning?.name, ...(d.meta?.tags ?? [])]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  return hay.includes(q);
+}
+
+function renderLibrary(): void {
+  const host = $("lib-list");
+  host.replaceChildren();
+  const q = $<HTMLInputElement>("lib-search").value.trim().toLowerCase();
+  const items = libraryCache.filter((it) => matchesFilter(it, q));
+
+  if (items.length === 0) {
+    const p = document.createElement("p");
+    p.className = "hint";
+    p.textContent = libraryCache.length ? "No matches." : "No saved diagrams yet.";
+    host.appendChild(p);
+    return;
+  }
+
+  for (const it of items) {
+    const card = document.createElement("div");
+    card.className = `lib-card${it.id === currentId ? " active" : ""}`;
+
+    const title = document.createElement("div");
+    title.className = "lib-title";
+    title.textContent = it.diagram.meta?.title || "(untitled)";
+
+    const meta = document.createElement("div");
+    meta.className = "lib-meta";
+    meta.textContent = [it.diagram.tuning?.name, ...(it.diagram.meta?.tags ?? [])]
+      .filter(Boolean)
+      .join(" · ");
+
+    const actions = document.createElement("div");
+    actions.className = "lib-actions";
+    const loadBtn = document.createElement("button");
+    loadBtn.type = "button";
+    loadBtn.textContent = "Load";
+    loadBtn.addEventListener("click", () => {
+      loadDiagram(it.diagram);
+      currentId = it.id;
+      renderLibrary();
+      setStatus(`Loaded "${it.diagram.meta?.title || it.id}".`);
+    });
+    const delBtn = document.createElement("button");
+    delBtn.type = "button";
+    delBtn.className = "ghost danger";
+    delBtn.textContent = "Delete";
+    delBtn.addEventListener("click", async () => {
+      if (!confirm(`Delete "${it.diagram.meta?.title || it.id}"?`)) return;
+      await deleteLibrary(it.id);
+      if (currentId === it.id) currentId = null;
+      await reloadLibrary();
+      setStatus("Deleted.");
+    });
+    actions.append(loadBtn, delBtn);
+
+    card.append(title, meta, actions);
+    host.appendChild(card);
+  }
+}
+
+async function reloadLibrary(): Promise<void> {
+  try {
+    libraryCache = await listLibrary();
+    renderLibrary();
+  } catch {
+    setStatus("Library API unavailable (run with `npm run dev`).");
+  }
+}
+
+function setStatus(msg: string): void {
+  $("lib-status").textContent = msg;
+}
+
+function initLibrary(): void {
+  $("lib-search").addEventListener("input", renderLibrary);
+
+  $("lib-save").addEventListener("click", async () => {
+    const id = currentId ?? makeId(state.meta?.title ?? "");
+    try {
+      await saveLibrary(id, state);
+      currentId = id;
+      await reloadLibrary();
+      setStatus(`Saved "${state.meta?.title || id}".`);
+    } catch (err) {
+      setStatus(`Save failed: ${(err as Error).message}`);
+    }
+  });
+
+  $("lib-save-new").addEventListener("click", async () => {
+    const id = makeId(state.meta?.title ?? "");
+    try {
+      await saveLibrary(id, state);
+      currentId = id;
+      await reloadLibrary();
+      setStatus(`Saved a new copy "${state.meta?.title || id}".`);
+    } catch (err) {
+      setStatus(`Save failed: ${(err as Error).message}`);
+    }
+  });
+
+  void reloadLibrary();
 }
 
 // ---------- Boot ----------
