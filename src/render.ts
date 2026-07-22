@@ -312,9 +312,10 @@ function resolveRootPc(d: Diagram): number | null {
 
 function markerIsRoot(d: Diagram, m: Marker, pc: number, rootPc: number | null): boolean {
   const mode = d.root?.mode;
-  if (mode === "pitchClass" && rootPc != null) return pc === rootPc;
+  if (mode === "pitchClass") return rootPc != null && pc === rootPc;
   if (mode === "position") return m.root === true;
-  return m.root === true;
+  // "None" (or no root config): never emphasize, even if marker.root is stored.
+  return false;
 }
 
 function markerLabel(d: Diagram, m: Marker, pc: number, rootPc: number | null): string {
