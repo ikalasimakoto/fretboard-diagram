@@ -359,21 +359,47 @@ function initControls(): void {
 let currentId: string | null = null;
 let libraryCache: StoredDiagram[] = [];
 
-function matchesFilter(it: StoredDiagram, q: string): boolean {
-  if (!q) return true;
+function haystack(it: StoredDiagram): string {
   const d = it.diagram;
-  const hay = [d.meta?.title, d.tuning?.name, ...(d.meta?.tags ?? [])]
+  return [d.meta?.title, d.tuning?.name, ...(d.meta?.tags ?? [])]
     .filter(Boolean)
     .join(" ")
     .toLowerCase();
-  return hay.includes(q);
+}
+
+/** AND match: every comma-separated term must appear. */
+function matchesFilter(it: StoredDiagram, terms: string[]): boolean {
+  if (terms.length === 0) return true;
+  const hay = haystack(it);
+  return terms.every((t) => hay.includes(t));
+}
+
+function sortItems(items: StoredDiagram[]): StoredDiagram[] {
+  const mode = $<HTMLSelectElement>("lib-sort").value;
+  const copy = [...items];
+  if (mode === "name") {
+    copy.sort((a, b) =>
+      (a.diagram.meta?.title ?? "").localeCompare(b.diagram.meta?.title ?? "", undefined, {
+        sensitivity: "base",
+      }),
+    );
+  } else if (mode === "created") {
+    copy.sort((a, b) => String(b.createdAt ?? b.savedAt).localeCompare(String(a.createdAt ?? a.savedAt)));
+  } else {
+    copy.sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt)));
+  }
+  return copy;
 }
 
 function renderLibrary(): void {
   const host = $("lib-list");
   host.replaceChildren();
-  const q = $<HTMLInputElement>("lib-search").value.trim().toLowerCase();
-  const items = libraryCache.filter((it) => matchesFilter(it, q));
+  const terms = $<HTMLInputElement>("lib-search")
+    .value.toLowerCase()
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean);
+  const items = sortItems(libraryCache.filter((it) => matchesFilter(it, terms)));
 
   if (items.length === 0) {
     const p = document.createElement("p");
@@ -386,6 +412,14 @@ function renderLibrary(): void {
   for (const it of items) {
     const card = document.createElement("div");
     card.className = `lib-card${it.id === currentId ? " active" : ""}`;
+
+    const thumb = document.createElement("div");
+    thumb.className = "lib-thumb";
+    try {
+      thumb.innerHTML = renderSvg(it.diagram);
+    } catch {
+      thumb.textContent = "—";
+    }
 
     const title = document.createElement("div");
     title.className = "lib-title";
@@ -421,7 +455,7 @@ function renderLibrary(): void {
     });
     actions.append(loadBtn, delBtn);
 
-    card.append(title, meta, actions);
+    card.append(thumb, title, meta, actions);
     host.appendChild(card);
   }
 }
@@ -441,6 +475,7 @@ function setStatus(msg: string): void {
 
 function initLibrary(): void {
   $("lib-search").addEventListener("input", renderLibrary);
+  $("lib-sort").addEventListener("change", renderLibrary);
 
   $("lib-save").addEventListener("click", async () => {
     const id = currentId ?? makeId(state.meta?.title ?? "");

@@ -1,3 +1,7 @@
 node_modules/
 out/
 .DS_Store
+
+# Saved diagrams are personal by default; keep the folder, ignore its contents.
+# Remove this rule if you want to version your library.
+library/*.json

@@ -48,8 +48,19 @@ function libraryApi(): Plugin {
             let body = "";
             for await (const chunk of req) body += chunk;
             const diagram = JSON.parse(body);
-            const record = { id: idMatch[1], savedAt: new Date().toISOString(), diagram };
-            writeFileSync(join(dir, `${idMatch[1]}.json`), JSON.stringify(record, null, 2));
+            const path = join(dir, `${idMatch[1]}.json`);
+            const now = new Date().toISOString();
+            // Preserve the original creation time across updates.
+            let createdAt = now;
+            if (existsSync(path)) {
+              try {
+                createdAt = JSON.parse(readFileSync(path, "utf8")).createdAt ?? now;
+              } catch {
+                /* fall back to now */
+              }
+            }
+            const record = { id: idMatch[1], createdAt, savedAt: now, diagram };
+            writeFileSync(path, JSON.stringify(record, null, 2));
             return send(200, record);
           }
 

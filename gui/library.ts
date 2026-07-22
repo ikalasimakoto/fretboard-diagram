@@ -5,6 +5,7 @@ import type { Diagram } from "../src/types.ts";
 
 export interface StoredDiagram {
   id: string;
+  createdAt?: string;
   savedAt: string;
   diagram: Diagram;
 }

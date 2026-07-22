@@ -44,6 +44,25 @@ body {
 .panel h2 { font-size: 15px; margin: 0 0 12px; }
 .panel h3 { font-size: 13px; margin: 18px 0 8px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
 
+/* Accordion sections */
+.acc { border-top: 1px solid var(--border); }
+.acc > summary {
+  list-style: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 12px 0 10px;
+  display: flex; align-items: center; gap: 6px;
+  user-select: none;
+}
+.acc > summary::-webkit-details-marker { display: none; }
+.acc > summary::before { content: "▸"; font-size: 10px; transition: transform 0.12s ease; }
+.acc[open] > summary::before { transform: rotate(90deg); }
+.acc-body { padding-bottom: 6px; }
+
 .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; font-size: 13px; }
 .field.small { flex: 1; }
 .field > span { color: var(--muted); font-size: 12px; }
@@ -127,7 +146,9 @@ table.board td { padding: 0; text-align: center; }
 
 /* Library */
 .library-panel { grid-column: 1 / -1; }
-#lib-search { width: 100%; margin: 4px 0 10px; }
+.lib-controls { display: flex; gap: 10px; align-items: flex-end; margin: 4px 0 12px; }
+#lib-search { flex: 1; }
+.lib-sort { flex: 0 0 auto; min-width: 160px; margin-bottom: 0; }
 .lib-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
 .lib-card {
   border: 1px solid var(--border);
@@ -137,6 +158,15 @@ table.board td { padding: 0; text-align: center; }
   display: flex; flex-direction: column; gap: 8px;
 }
 .lib-card.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent-soft); }
+.lib-thumb {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px;
+  display: flex; justify-content: center; align-items: center;
+  min-height: 96px;
+}
+.lib-thumb svg { width: 100%; height: auto; max-height: 150px; }
 .lib-title { font-size: 13px; font-weight: 600; line-height: 1.3; }
 .lib-meta { font-size: 11px; color: var(--muted); line-height: 1.4; min-height: 15px; }
 .lib-actions { display: flex; gap: 6px; }

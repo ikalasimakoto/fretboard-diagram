@@ -26,61 +26,77 @@
           <input id="tags" type="text" placeholder="scale, C major, ionian" />
         </label>
 
-        <h3>Tuning</h3>
-        <label class="field">
-          <span>Preset</span>
-          <select id="tuning-preset"></select>
-        </label>
-        <label class="field">
-          <span>Name (shown on image)</span>
-          <input id="tuning-name" type="text" />
-        </label>
-        <div id="tuning-strings" class="tuning-strings"></div>
-        <div class="row">
-          <button id="add-string" type="button" class="ghost">+ string (treble)</button>
-          <button id="remove-string" type="button" class="ghost">− string</button>
-        </div>
+        <details class="acc" open>
+          <summary>Tuning</summary>
+          <div class="acc-body">
+            <label class="field">
+              <span>Preset</span>
+              <select id="tuning-preset"></select>
+            </label>
+            <label class="field">
+              <span>Name (shown on image)</span>
+              <input id="tuning-name" type="text" />
+            </label>
+            <div id="tuning-strings" class="tuning-strings"></div>
+            <div class="row">
+              <button id="add-string" type="button" class="ghost">+ string (treble)</button>
+              <button id="remove-string" type="button" class="ghost">− string</button>
+            </div>
+          </div>
+        </details>
 
-        <h3>Frets</h3>
-        <div class="row">
-          <label class="field small"><span>From</span><input id="fret-from" type="number" min="0" max="24" /></label>
-          <label class="field small"><span>To</span><input id="fret-to" type="number" min="1" max="24" /></label>
-        </div>
-        <label class="check"><input id="show-fretnum" type="checkbox" /> Show fret number</label>
-        <label class="check"><input id="show-inlay" type="checkbox" /> Show inlays</label>
-        <label class="field small"><span>Capo (0 = none)</span><input id="capo" type="number" min="0" max="24" /></label>
+        <details class="acc" open>
+          <summary>Frets</summary>
+          <div class="acc-body">
+            <div class="row">
+              <label class="field small"><span>From</span><input id="fret-from" type="number" min="0" max="24" /></label>
+              <label class="field small"><span>To</span><input id="fret-to" type="number" min="1" max="24" /></label>
+            </div>
+            <label class="check"><input id="show-fretnum" type="checkbox" /> Show fret number</label>
+            <label class="check"><input id="show-inlay" type="checkbox" /> Show inlays</label>
+            <label class="field small"><span>Capo (0 = none)</span><input id="capo" type="number" min="0" max="24" /></label>
+          </div>
+        </details>
 
-        <h3>Labels</h3>
-        <label class="field">
-          <span>Show</span>
-          <select id="notation-type">
-            <option value="note">Note names</option>
-            <option value="interval">Intervals</option>
-            <option value="none">Nothing</option>
-          </select>
-        </label>
-        <label class="field" id="acc-field">
-          <span>Accidentals</span>
-          <select id="accidentals">
-            <option value="sharp">Sharps (#)</option>
-            <option value="flat">Flats (♭)</option>
-          </select>
-        </label>
+        <details class="acc" open>
+          <summary>Labels</summary>
+          <div class="acc-body">
+            <label class="field">
+              <span>Show</span>
+              <select id="notation-type">
+                <option value="note">Note names</option>
+                <option value="interval">Intervals</option>
+                <option value="none">Nothing</option>
+              </select>
+            </label>
+            <label class="field" id="acc-field">
+              <span>Accidentals</span>
+              <select id="accidentals">
+                <option value="sharp">Sharps (#)</option>
+                <option value="flat">Flats (♭)</option>
+              </select>
+            </label>
+          </div>
+        </details>
 
-        <h3>Root</h3>
-        <label class="field">
-          <span>Mode</span>
-          <select id="root-mode">
-            <option value="pitchClass">By note (pitch class)</option>
-            <option value="position">By position (mark on board)</option>
-            <option value="null">None</option>
-          </select>
-        </label>
-        <label class="field" id="root-value-field">
-          <span>Root note</span>
-          <select id="root-value"></select>
-        </label>
-        <p class="hint" id="root-hint"></p>
+        <details class="acc" open>
+          <summary>Root</summary>
+          <div class="acc-body">
+            <label class="field">
+              <span>Mode</span>
+              <select id="root-mode">
+                <option value="pitchClass">By note (pitch class)</option>
+                <option value="position">By position (mark on board)</option>
+                <option value="null">None</option>
+              </select>
+            </label>
+            <label class="field" id="root-value-field">
+              <span>Root note</span>
+              <select id="root-value"></select>
+            </label>
+            <p class="hint" id="root-hint"></p>
+          </div>
+        </details>
       </section>
 
       <!-- Interactive diagram (click to edit) -->
@@ -124,7 +140,17 @@
             <button id="lib-save-new" type="button" class="ghost">Save as new</button>
           </div>
         </div>
-        <input id="lib-search" type="search" placeholder="Filter by title, tag, or tuning…" />
+        <div class="lib-controls">
+          <input id="lib-search" type="search" placeholder="Filter — comma-separated terms, all must match" />
+          <label class="field small lib-sort">
+            <span>Sort</span>
+            <select id="lib-sort">
+              <option value="updated">Updated (newest)</option>
+              <option value="created">Created (newest)</option>
+              <option value="name">Name (A–Z)</option>
+            </select>
+          </label>
+        </div>
         <div id="lib-list" class="lib-list"></div>
         <p class="hint" id="lib-status">Saved diagrams are stored as JSON files in <code>library/</code>.</p>
       </section>
