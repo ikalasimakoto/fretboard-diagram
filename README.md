@@ -85,8 +85,6 @@ tag, or tuning; load or delete from the panel.
 
 ## Roadmap
 
-- Capo: reinterpret open-string markers relative to the capo (× at capo position).
-- Per-note color presets and per-pitch-class spelling UI; richer styling.
 - Vertical layout option (data spec is already orientation-neutral).
 
 ## Done
@@ -97,3 +95,6 @@ tag, or tuning; load or delete from the panel.
 - Diagram library: save, tag (chord/scale/mode/tuning/keywords), filter, recall.
 - Groups: enclose a set of notes with a rounded outline (`src/group.ts`);
   select on the board, per-group color, multiple groups.
+- Per-note settings (12 pitch classes): color, label show/hide, ♯/♭ spelling;
+  per-degree interval labels (e.g. ♯5 vs ♭6, 2 vs 9).
+- Capo hides the open-string markers behind it.

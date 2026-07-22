@@ -4,8 +4,8 @@
 // drawing logic of its own; everything visual comes from renderSvg().
 
 import { renderSvg } from "../src/render.ts";
-import { pitchClassOf } from "../src/theory.ts";
-import type { Diagram } from "../src/types.ts";
+import { pitchClassOf, DEFAULT_INTERVALS } from "../src/theory.ts";
+import type { Diagram, NotationConfig } from "../src/types.ts";
 import {
   listLibrary,
   saveLibrary,
@@ -21,6 +21,23 @@ const TUNING_PRESETS: Record<string, string[]> = {
 };
 
 const PITCH_CLASSES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+const FLAT_NAMES = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
+// Pitch classes with two common spellings (sharp, flat).
+const ACCIDENTAL_ALTS: Record<number, [string, string]> = {
+  1: ["C#", "Db"],
+  3: ["D#", "Eb"],
+  6: ["F#", "Gb"],
+  8: ["G#", "Ab"],
+  10: ["A#", "Bb"],
+};
+
+/** Display name for a pitch class given current spelling overrides + global accidentals. */
+function displayNoteName(pc: number): string {
+  const not = state.notation;
+  const override = not?.noteSpelling?.[pc];
+  if (override) return override;
+  return (not?.accidentals ?? "sharp") === "flat" ? FLAT_NAMES[pc] : PITCH_CLASSES[pc];
+}
 
 const state: Diagram = {
   version: 1,
@@ -110,6 +127,148 @@ function buildRootValueOptions(): void {
   sel.value = state.root?.value ?? "C";
 }
 
+// ---------- Per-note settings (12 pitch classes) ----------
+
+let editingNotePc: number | null = null;
+let editingNoteOriginal: string | undefined;
+
+function notation(): NotationConfig {
+  return (state.notation ??= { type: "note" });
+}
+
+function buildPerNote(): void {
+  const host = $("per-note");
+  host.replaceChildren();
+  const not = notation();
+  for (let pc = 0; pc < 12; pc++) {
+    const row = document.createElement("div");
+    row.className = "pn-row";
+
+    const name = document.createElement("span");
+    name.className = "pn-name";
+    name.textContent = displayNoteName(pc);
+
+    // Show / hide this pitch class's label.
+    const show = document.createElement("input");
+    show.type = "checkbox";
+    show.title = "Show label";
+    show.checked = not.labelVisible?.[pc] !== false;
+    show.addEventListener("change", () => {
+      not.labelVisible ??= {};
+      if (show.checked) delete not.labelVisible[pc];
+      else not.labelVisible[pc] = false;
+      renderPreview();
+    });
+
+    // ♯/♭ spelling (accidental pitch classes only).
+    const spellCell = document.createElement("span");
+    spellCell.className = "pn-spell";
+    const alts = ACCIDENTAL_ALTS[pc];
+    if (alts) {
+      const sel = document.createElement("select");
+      for (const opt of alts) {
+        const o = document.createElement("option");
+        o.value = opt;
+        o.textContent = opt;
+        sel.appendChild(o);
+      }
+      sel.value = displayNoteName(pc);
+      sel.addEventListener("change", () => {
+        not.noteSpelling ??= {};
+        not.noteSpelling[pc] = sel.value;
+        name.textContent = sel.value;
+        renderPreview();
+      });
+      spellCell.appendChild(sel);
+    }
+
+    // Color: swatch that opens an inline editor with live preview + OK/Cancel.
+    const colorCell = document.createElement("span");
+    colorCell.className = "pn-color";
+    if (editingNotePc === pc) {
+      const picker = document.createElement("input");
+      picker.type = "color";
+      picker.className = "grp-picker";
+      picker.value = not.noteColor?.[pc] ?? "#222222";
+      picker.addEventListener("input", () => {
+        (not.noteColor ??= {})[pc] = picker.value;
+        renderPreview();
+      });
+      const ok = document.createElement("button");
+      ok.type = "button";
+      ok.textContent = "OK";
+      ok.addEventListener("click", () => {
+        editingNotePc = null;
+        buildPerNote();
+      });
+      const cancel = document.createElement("button");
+      cancel.type = "button";
+      cancel.className = "ghost";
+      cancel.textContent = "Cancel";
+      cancel.addEventListener("click", () => {
+        if (editingNoteOriginal === undefined) delete not.noteColor?.[pc];
+        else (not.noteColor ??= {})[pc] = editingNoteOriginal;
+        editingNotePc = null;
+        buildPerNote();
+        renderPreview();
+      });
+      const def = document.createElement("button");
+      def.type = "button";
+      def.className = "ghost";
+      def.textContent = "Default";
+      def.addEventListener("click", () => {
+        delete not.noteColor?.[pc];
+        editingNotePc = null;
+        buildPerNote();
+        renderPreview();
+      });
+      colorCell.append(picker, ok, cancel, def);
+    } else {
+      const swatch = document.createElement("button");
+      swatch.type = "button";
+      swatch.className = "grp-swatch";
+      swatch.style.background = not.noteColor?.[pc] ?? "#222222";
+      swatch.title = not.noteColor?.[pc] ? "Custom color — click to change" : "Default color — click to set";
+      if (!not.noteColor?.[pc]) swatch.classList.add("pn-default");
+      swatch.addEventListener("click", () => {
+        editingNotePc = pc;
+        editingNoteOriginal = not.noteColor?.[pc];
+        buildPerNote();
+      });
+      colorCell.appendChild(swatch);
+    }
+
+    row.append(name, show, spellCell, colorCell);
+    host.appendChild(row);
+  }
+}
+
+function buildIntervalLabels(): void {
+  const host = $("interval-labels");
+  host.replaceChildren();
+  const not = notation();
+  for (let deg = 0; deg < 12; deg++) {
+    const row = document.createElement("div");
+    row.className = "il-row";
+    const lbl = document.createElement("span");
+    lbl.className = "il-label";
+    lbl.textContent = `${deg} st · ${DEFAULT_INTERVALS[deg]}`;
+    const input = document.createElement("input");
+    input.type = "text";
+    input.value = not.intervalSpelling?.[deg] ?? "";
+    input.placeholder = DEFAULT_INTERVALS[deg];
+    input.addEventListener("change", () => {
+      const v = input.value.trim();
+      not.intervalSpelling ??= {};
+      if (v && v !== DEFAULT_INTERVALS[deg]) not.intervalSpelling[deg] = v;
+      else delete not.intervalSpelling[deg];
+      renderPreview();
+    });
+    row.append(lbl, input);
+    host.appendChild(row);
+  }
+}
+
 // ---------- Sync controls <- state ----------
 
 function syncControls(): void {
@@ -166,8 +325,11 @@ function loadDiagram(d: Diagram): void {
   state.markers = src.markers ?? [];
   state.groups = src.groups ?? [];
   state.style = src.style;
+  editingNotePc = null;
   buildTuningEditor();
   buildRootValueOptions();
+  buildPerNote();
+  buildIntervalLabels();
   syncControls();
   renderAll();
 }
@@ -313,12 +475,14 @@ function initControls(): void {
   });
 
   $<HTMLSelectElement>("notation-type").addEventListener("change", (e) => {
-    state.notation = { ...state.notation, type: (e.target as HTMLSelectElement).value as "note" | "interval" | "none" };
+    // Mutate in place so per-note/interval row handlers keep a valid reference.
+    notation().type = (e.target as HTMLSelectElement).value as "note" | "interval" | "none";
     syncControls();
     renderAll();
   });
   $<HTMLSelectElement>("accidentals").addEventListener("change", (e) => {
-    state.notation = { ...state.notation, type: state.notation?.type ?? "note", accidentals: (e.target as HTMLSelectElement).value as "sharp" | "flat" };
+    notation().accidentals = (e.target as HTMLSelectElement).value as "sharp" | "flat";
+    buildPerNote(); // default spellings shown per-note follow the global choice
     renderAll();
   });
 
@@ -694,5 +858,7 @@ seedExample();
 initControls();
 buildTuningEditor();
 buildRootValueOptions();
+buildPerNote();
+buildIntervalLabels();
 syncControls();
 renderAll();

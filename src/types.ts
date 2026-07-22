@@ -43,6 +43,16 @@ export interface NotationConfig {
    * Lets you choose, e.g., "#5" vs "m6", or "M2" vs "9".
    */
   intervalSpelling?: Partial<Record<number, string>>;
+  /**
+   * Per-pitch-class dot color (keyed by pitch class 0–11). Overrides the theme
+   * dot/root color; a marker's own `color` still wins over this.
+   */
+  noteColor?: Partial<Record<number, string>>;
+  /**
+   * Per-pitch-class label visibility (keyed by pitch class 0–11). Absent = shown;
+   * `false` hides that pitch class's label (e.g. name only the chord tones).
+   */
+  labelVisible?: Partial<Record<number, boolean>>;
 }
 
 export interface Tuning {

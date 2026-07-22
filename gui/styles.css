@@ -154,6 +154,22 @@ table.board td { padding: 0; text-align: center; }
 .grp-label { flex: 1; font-size: 12px; color: var(--muted); }
 .grp-row button { padding: 5px 10px; font-size: 12px; }
 
+/* Per-note table */
+.per-note { display: flex; flex-direction: column; gap: 4px; }
+.pn-row { display: flex; align-items: center; gap: 8px; min-height: 30px; }
+.pn-name { width: 32px; font-size: 13px; font-weight: 500; }
+.pn-spell { width: 62px; }
+.pn-spell select { width: 100%; padding: 3px 4px; font-size: 12px; }
+.pn-color { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.pn-color button { padding: 4px 8px; font-size: 11px; }
+.grp-swatch.pn-default { position: relative; opacity: 0.55; }
+
+/* Interval labels */
+.interval-labels { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.il-row { display: flex; align-items: center; gap: 6px; }
+.il-label { width: 74px; font-size: 11px; color: var(--muted); }
+.il-row input { width: 100%; padding: 4px 6px; font-size: 12px; }
+
 .json { width: 100%; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11px; line-height: 1.5; resize: vertical; }
 
 /* Library */

@@ -268,14 +268,15 @@ export function renderSvg(d: Diagram, opts: RenderOptions = {}): string {
 
     const label = markerLabel(d, m, pc, rootPc);
     const isRoot = markerIsRoot(d, m, pc, rootPc);
-    const fill = m.color ?? (isRoot ? S.rootColor : S.dotColor);
+    const fill = markerFill(d, m, pc, isRoot, S);
 
     if (m.fret === 0) {
       if (from !== 0) continue; // open strings only meaningful with the nut shown
+      if (capoFret != null) continue; // with a capo, open strings are behind it — hide them
       if (m.type === "mute") {
         parts.push(muteMark(openCx, y, S));
       } else {
-        parts.push(openRing(openCx, y, label, isRoot, S));
+        parts.push(openRing(openCx, y, label, isRoot, S, fill));
       }
       continue;
     }
@@ -353,11 +354,20 @@ function markerLabel(d: Diagram, m: Marker, pc: number, rootPc: number | null): 
   if (m.label != null) return m.label;
   const not = d.notation ?? { type: "note" as const };
   if (not.type === "none") return "";
+  if (not.labelVisible?.[pc] === false) return ""; // this pitch class's labels are hidden
   if (not.type === "interval") {
     if (rootPc == null) return "";
     return intervalName(pc, rootPc, not.intervalSpelling);
   }
   return noteName(pc, not.accidentals ?? "sharp", not.noteSpelling);
+}
+
+/** Dot fill: explicit marker color > per-pitch-class color > theme (root/dot). */
+function markerFill(d: Diagram, m: Marker, pc: number, isRoot: boolean, S: Style): string {
+  if (m.color) return m.color;
+  const nc = d.notation?.noteColor?.[pc];
+  if (nc) return nc;
+  return isRoot ? S.rootColor : S.dotColor;
 }
 
 function vline(x: number, y1: number, y2: number, color: string, w: number): string {
@@ -376,8 +386,14 @@ function dotText(cx: number, cy: number, text: string, color: string, S: Style):
   );
 }
 
-function openRing(cx: number, cy: number, label: string, isRoot: boolean, S: Style): string {
-  const color = isRoot ? S.rootColor : S.dotColor;
+function openRing(
+  cx: number,
+  cy: number,
+  label: string,
+  isRoot: boolean,
+  S: Style,
+  color: string,
+): string {
   let out = "";
   if (isRoot) {
     out += `<circle cx="${cx}" cy="${cy}" r="${S.noteRadius + 3}" fill="none" stroke="${color}" stroke-width="2"/>`;
