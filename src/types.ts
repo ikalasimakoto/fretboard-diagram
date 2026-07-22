@@ -89,6 +89,7 @@ export interface StyleOverrides {
   rootColor?: string;
   lineColor?: string;
   inlayColor?: string;
+  capoColor?: string;
   textOnDot?: string;
 }
 

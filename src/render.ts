@@ -25,6 +25,7 @@ interface Style {
   dotColor: string;
   rootColor: string;
   inlayColor: string;
+  capoColor: string;
   textOnDot: string;
   font: string;
 }
@@ -48,6 +49,7 @@ const DEFAULTS: Style = {
   dotColor: "#222222",
   rootColor: "#c0392b",
   inlayColor: "#cfcfcf",
+  capoColor: "#6e6e6e",
   textOnDot: "#ffffff",
   font: "system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif",
 };
@@ -216,7 +218,7 @@ export function renderSvg(d: Diagram, opts: RenderOptions = {}): string {
     const w = S.noteRadius * 1.3;
     parts.push(
       `<rect x="${cx - w / 2}" y="${yTop - S.overhang}" width="${w}" ` +
-        `height="${boardH + 2 * S.overhang}" rx="${w / 2}" fill="${S.lineColor}" opacity="0.85"/>`,
+        `height="${boardH + 2 * S.overhang}" rx="${w / 2}" fill="${S.capoColor}"/>`,
     );
   }
 
@@ -292,6 +294,7 @@ function mapStyleOverrides(d: Diagram): Partial<Style> {
   if (s.rootColor) out.rootColor = s.rootColor;
   if (s.lineColor) out.lineColor = s.lineColor;
   if (s.inlayColor) out.inlayColor = s.inlayColor;
+  if (s.capoColor) out.capoColor = s.capoColor;
   if (s.textOnDot) out.textOnDot = s.textOnDot;
   return out;
 }

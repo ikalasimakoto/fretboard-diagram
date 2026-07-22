@@ -33,19 +33,25 @@ const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getEleme
 function cycleMarker(stringIdx: number, fret: number): void {
   const i = state.markers.findIndex((m) => m.string === stringIdx && m.fret === fret);
   const existing = i >= 0 ? state.markers[i] : null;
+  // The root (◎) step only exists in "By position" mode — in the other modes the
+  // root is decided by pitch class (or off), so cycling through it looks like a
+  // no-op. There we skip straight past it.
+  const positionMode = state.root?.mode === "position";
 
   if (fret === 0) {
-    // empty -> open -> open(root) -> mute -> empty
+    // empty -> open -> [open+root] -> mute -> empty
     if (!existing) state.markers.push({ string: stringIdx, fret: 0, type: "open" });
-    else if (existing.type === "open" && !existing.root) existing.root = true;
-    else if (existing.type === "open" && existing.root) {
+    else if (existing.type === "mute") state.markers.splice(i, 1);
+    else if (existing.root) {
       existing.type = "mute";
       existing.root = false;
-    } else state.markers.splice(i, 1);
+    } else if (positionMode) existing.root = true;
+    else existing.type = "mute";
   } else {
-    // empty -> note -> root -> empty
+    // empty -> note -> [root] -> empty
     if (!existing) state.markers.push({ string: stringIdx, fret, type: "dot" });
-    else if (!existing.root) existing.root = true;
+    else if (existing.root) state.markers.splice(i, 1);
+    else if (positionMode) existing.root = true;
     else state.markers.splice(i, 1);
   }
   renderAll();
