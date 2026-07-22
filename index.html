@@ -105,8 +105,15 @@
           <h2>Diagram</h2>
           <button id="clear-all" type="button" class="ghost">Clear notes</button>
         </div>
-        <p class="hint">Click the diagram to place/cycle notes (fretted → note; open string → open → mute). In “By position” root mode, an extra click marks a root (◎).</p>
+        <p class="hint" id="diagram-hint">Click the diagram to place/cycle notes (fretted → note; open string → open → mute). In “By position” root mode, an extra click marks a root (◎).</p>
         <div id="preview" class="preview interactive"></div>
+
+        <div class="group-tools">
+          <button id="grp-select" type="button" class="ghost">Select for group</button>
+          <button id="grp-create" type="button" hidden>Create group (0)</button>
+          <button id="grp-cancel" type="button" class="ghost" hidden>Cancel</button>
+        </div>
+        <div id="grp-list" class="grp-list"></div>
       </section>
 
       <!-- Export + JSON -->

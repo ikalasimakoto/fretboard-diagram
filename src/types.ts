@@ -90,7 +90,17 @@ export interface StyleOverrides {
   lineColor?: string;
   inlayColor?: string;
   capoColor?: string;
+  groupColor?: string;
   textOnDot?: string;
+}
+
+/** A set of positions enclosed by a single outline (chord/position shape). */
+export interface Group {
+  id: string;
+  /** Positions to enclose; each references a marker by string index and fret. */
+  markers: Array<{ string: number; fret: number }>;
+  /** Outline color (CSS). Omitted = theme default. */
+  color?: string | null;
 }
 
 export interface Diagram {
@@ -102,6 +112,6 @@ export interface Diagram {
   root?: RootConfig | null;
   notation?: NotationConfig;
   markers: Marker[];
+  groups?: Group[];
   style?: StyleOverrides;
-  // groups?: ...  // polygon outlines around marker sets — planned, not yet implemented.
 }

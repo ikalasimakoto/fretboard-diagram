@@ -86,7 +86,6 @@ tag, or tuning; load or delete from the panel.
 ## Roadmap
 
 - Capo: reinterpret open-string markers relative to the capo (× at capo position).
-- Groups: outline a set of markers with a thick polygon (chord/position shapes).
 - Per-note color presets and per-pitch-class spelling UI; richer styling.
 - Vertical layout option (data spec is already orientation-neutral).
 
@@ -96,3 +95,5 @@ tag, or tuning; load or delete from the panel.
 - Local web GUI with interactive board and live preview.
 - PNG / JPEG / SVG export at selectable resolution.
 - Diagram library: save, tag (chord/scale/mode/tuning/keywords), filter, recall.
+- Groups: enclose a set of notes with a rounded outline (`src/group.ts`);
+  select on the board, per-group color, multiple groups.

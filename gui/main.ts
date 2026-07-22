@@ -31,7 +31,10 @@ const state: Diagram = {
   root: { mode: "pitchClass", value: "C" },
   notation: { type: "note", accidentals: "sharp" },
   markers: [],
+  groups: [],
 };
+
+const GROUP_PALETTE = ["#2b6cb0", "#c0392b", "#2e7d32", "#8e44ad", "#d97706", "#0891b2"];
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -140,6 +143,8 @@ function syncControls(): void {
 
 function renderAll(): void {
   $("preview").innerHTML = renderSvg(state, { interactive: true });
+  if (groupSelect) markSelectedHits();
+  renderGroups();
   $<HTMLTextAreaElement>("json").value = JSON.stringify(state, null, 2);
 }
 
@@ -154,6 +159,7 @@ function loadDiagram(d: Diagram): void {
   state.root = src.root ?? { mode: "pitchClass", value: "C" };
   state.notation = src.notation ?? { type: "note", accidentals: "sharp" };
   state.markers = src.markers ?? [];
+  state.groups = src.groups ?? [];
   state.style = src.style;
   buildTuningEditor();
   buildRootValueOptions();
@@ -322,12 +328,18 @@ function initControls(): void {
     renderAll();
   });
 
-  // Click the diagram itself to place/cycle notes (delegated to the hit layer).
+  // Click the diagram: place/cycle notes, or (in group-select mode) toggle
+  // membership of the clicked note in the pending group.
   $("preview").addEventListener("click", (e) => {
     const hit = (e.target as Element).closest?.(".hit");
     if (!hit) return;
-    cycleMarker(Number(hit.getAttribute("data-string")), Number(hit.getAttribute("data-fret")));
+    const s = Number(hit.getAttribute("data-string"));
+    const f = Number(hit.getAttribute("data-fret"));
+    if (groupSelect) toggleSelection(s, f, hit as SVGElement);
+    else cycleMarker(s, f);
   });
+
+  initGroups();
 
   $("clear-all").addEventListener("click", () => {
     state.markers = [];
@@ -502,6 +514,116 @@ function initLibrary(): void {
   });
 
   void reloadLibrary();
+}
+
+// ---------- Groups (outline sets of notes) ----------
+
+let groupSelect = false;
+const selected = new Set<string>(); // keys "s:f"
+
+function markerExists(s: number, f: number): boolean {
+  return state.markers.some((m) => m.string === s && m.fret === f);
+}
+
+/** Re-apply the "selected" class to hit targets after a re-render. */
+function markSelectedHits(): void {
+  for (const key of selected) {
+    const [s, f] = key.split(":");
+    const el = document.querySelector(`#preview svg .hit[data-string="${s}"][data-fret="${f}"]`);
+    el?.classList.add("selected");
+  }
+}
+
+function toggleSelection(s: number, f: number, el: SVGElement): void {
+  if (!markerExists(s, f)) return; // only notes can be grouped
+  const key = `${s}:${f}`;
+  if (selected.has(key)) {
+    selected.delete(key);
+    el.classList.remove("selected");
+  } else {
+    selected.add(key);
+    el.classList.add("selected");
+  }
+  $<HTMLButtonElement>("grp-create").textContent = `Create group (${selected.size})`;
+}
+
+function enterGroupSelect(): void {
+  groupSelect = true;
+  selected.clear();
+  $("preview").classList.add("selecting");
+  $("grp-select").hidden = true;
+  $<HTMLButtonElement>("grp-create").hidden = false;
+  $<HTMLButtonElement>("grp-create").textContent = "Create group (0)";
+  $("grp-cancel").hidden = false;
+  $("diagram-hint").textContent = "Group mode: click notes to select, then Create group.";
+}
+
+function exitGroupSelect(): void {
+  groupSelect = false;
+  selected.clear();
+  $("preview").classList.remove("selecting");
+  $("grp-select").hidden = false;
+  $("grp-create").hidden = true;
+  $("grp-cancel").hidden = true;
+  $("diagram-hint").textContent =
+    "Click the diagram to place/cycle notes (fretted → note; open string → open → mute). In “By position” root mode, an extra click marks a root (◎).";
+  renderAll(); // clears selection highlight
+}
+
+function createGroupFromSelection(): void {
+  if (selected.size === 0) {
+    exitGroupSelect();
+    return;
+  }
+  const markers = [...selected].map((k) => {
+    const [s, f] = k.split(":").map(Number);
+    return { string: s, fret: f };
+  });
+  const color = GROUP_PALETTE[(state.groups?.length ?? 0) % GROUP_PALETTE.length];
+  (state.groups ??= []).push({ id: `g${Date.now().toString(36)}`, markers, color });
+  exitGroupSelect();
+}
+
+function renderGroups(): void {
+  const host = $("grp-list");
+  host.replaceChildren();
+  const groups = state.groups ?? [];
+  groups.forEach((g, idx) => {
+    const row = document.createElement("div");
+    row.className = "grp-row";
+
+    const swatch = document.createElement("input");
+    swatch.type = "color";
+    swatch.value = g.color ?? "#2b6cb0";
+    swatch.title = "Outline color";
+    swatch.addEventListener("input", () => {
+      g.color = swatch.value;
+      renderAll();
+    });
+
+    const label = document.createElement("span");
+    label.className = "grp-label";
+    const nn = g.markers.length;
+    label.textContent = `Group ${idx + 1} · ${nn} note${nn === 1 ? "" : "s"}`;
+
+    const del = document.createElement("button");
+    del.type = "button";
+    del.className = "ghost danger";
+    del.textContent = "Delete";
+    del.addEventListener("click", () => {
+      state.groups?.splice(idx, 1);
+      renderAll();
+    });
+
+    row.append(swatch, label, del);
+    host.appendChild(row);
+  });
+}
+
+function initGroups(): void {
+  $("grp-select").addEventListener("click", enterGroupSelect);
+  $("grp-cancel").addEventListener("click", exitGroupSelect);
+  $("grp-create").addEventListener("click", createGroupFromSelection);
 }
 
 // ---------- Boot ----------

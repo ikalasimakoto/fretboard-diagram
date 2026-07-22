@@ -5,6 +5,7 @@
 
 import type { Diagram, Marker } from "./types.ts";
 import { pitchClassOf, noteName, intervalName } from "./theory.ts";
+import { groupOutlinePath } from "./group.ts";
 
 interface Style {
   fretSpacing: number;
@@ -26,6 +27,7 @@ interface Style {
   rootColor: string;
   inlayColor: string;
   capoColor: string;
+  groupColor: string;
   textOnDot: string;
   font: string;
 }
@@ -50,6 +52,7 @@ const DEFAULTS: Style = {
   rootColor: "#c0392b",
   inlayColor: "#cfcfcf",
   capoColor: "#6e6e6e",
+  groupColor: "#2b6cb0",
   textOnDot: "#ffffff",
   font: "system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif",
 };
@@ -222,6 +225,33 @@ export function renderSvg(d: Diagram, opts: RenderOptions = {}): string {
     );
   }
 
+  // Group outlines (behind the markers). Only enclose positions that actually
+  // have a visible marker, so removing a note updates the outline.
+  if (d.groups?.length) {
+    const present = new Set(
+      d.markers
+        .filter((m) => m.fret === 0 || (m.fret >= from && m.fret <= to))
+        .filter((m) => m.fret !== 0 || from === 0)
+        .map((m) => `${m.string}:${m.fret}`),
+    );
+    const posXY = (s: number, f: number) => ({
+      x: f === 0 ? openCx : xFret(f),
+      y: yString(s),
+    });
+    for (const g of d.groups) {
+      const pts = g.markers
+        .filter((p) => present.has(`${p.string}:${p.fret}`))
+        .map((p) => posXY(p.string, p.fret));
+      if (pts.length === 0) continue;
+      const path = groupOutlinePath(pts, S.noteRadius + 7);
+      const color = g.color ?? S.groupColor;
+      parts.push(
+        `<path d="${path}" fill="none" stroke="${color}" stroke-width="3" ` +
+          `stroke-linejoin="round" stroke-linecap="round"/>`,
+      );
+    }
+  }
+
   const rootPc = resolveRootPc(d);
 
   // Markers.
@@ -295,6 +325,7 @@ function mapStyleOverrides(d: Diagram): Partial<Style> {
   if (s.lineColor) out.lineColor = s.lineColor;
   if (s.inlayColor) out.inlayColor = s.inlayColor;
   if (s.capoColor) out.capoColor = s.capoColor;
+  if (s.groupColor) out.groupColor = s.groupColor;
   if (s.textOnDot) out.textOnDot = s.textOnDot;
   return out;
 }
