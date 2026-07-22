@@ -12,6 +12,7 @@
     "example": "node examples/render-example.ts"
   },
   "devDependencies": {
+    "@types/node": "^26.1.1",
     "typescript": "^5.6.0",
     "vite": "^8.1.5"
   }

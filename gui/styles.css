@@ -105,6 +105,9 @@ table.board td { padding: 0; text-align: center; }
 .fret-col { position: relative; }
 .open-col::after { content: ""; }
 
+.panel-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.panel-head h2 { margin: 0; }
+
 .preview {
   background: #fff;
   border: 1px solid var(--border);
@@ -115,5 +118,9 @@ table.board td { padding: 0; text-align: center; }
   display: flex; justify-content: center;
 }
 .preview svg { max-width: 100%; height: auto; }
+
+/* Interactive editing affordance on the diagram's transparent hit targets. */
+.preview.interactive svg .hit { transition: fill 0.08s ease; }
+.preview.interactive svg .hit:hover { fill: rgba(0, 0, 0, 0.07); }
 
 .json { width: 100%; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11px; line-height: 1.5; resize: vertical; }

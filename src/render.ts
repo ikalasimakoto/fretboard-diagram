@@ -84,8 +84,15 @@ function wrapText(text: string, maxWidth: number, charW: number): string[] {
   return lines;
 }
 
-export function renderSvg(d: Diagram, styleIn?: Partial<Style>): string {
-  const S: Style = { ...DEFAULTS, ...mapStyleOverrides(d), ...(styleIn ?? {}) };
+export interface RenderOptions {
+  /** Add a transparent, clickable hit-target at every position (for a GUI editor). Off for exports. */
+  interactive?: boolean;
+  style?: Partial<Style>;
+}
+
+export function renderSvg(d: Diagram, opts: RenderOptions = {}): string {
+  const S: Style = { ...DEFAULTS, ...mapStyleOverrides(d), ...(opts.style ?? {}) };
+  const interactive = opts.interactive ?? false;
 
   const strings = d.tuning.strings;
   const n = strings.length;
@@ -131,6 +138,7 @@ export function renderSvg(d: Diagram, styleIn?: Partial<Style>): string {
   const xWire = (k: number) => originX + (k - leftWire) * S.fretSpacing;
   const xFret = (f: number) => xWire(f) - S.fretSpacing / 2; // center of fret f's space
   const yString = (i: number) => originY + (n - 1 - i) * S.stringSpacing; // i=0 at bottom
+  const openCx = (originX - S.nutGap) - S.openGap - S.noteRadius; // open-string marker x
 
   const parts: string[] = [];
 
@@ -215,7 +223,6 @@ export function renderSvg(d: Diagram, styleIn?: Partial<Style>): string {
   const rootPc = resolveRootPc(d);
 
   // Markers.
-  const openCx = (originX - S.nutGap) - S.openGap - S.noteRadius; // gap from the nut line
   for (const m of d.markers) {
     if (m.string < 0 || m.string >= n) continue;
     const openPc = pitchClassOf(strings[m.string]);
@@ -250,6 +257,24 @@ export function renderSvg(d: Diagram, styleIn?: Partial<Style>): string {
     }
     parts.push(`<circle cx="${cx}" cy="${y}" r="${S.noteRadius}" fill="${fill}"/>`);
     if (label) parts.push(dotText(cx, y, label, S.textOnDot, S));
+  }
+
+  // Transparent click targets for an interactive editor (never in exports).
+  if (interactive) {
+    const hitR = Math.min(S.fretSpacing, S.stringSpacing) / 2 - 1;
+    const fretCols: number[] = [];
+    if (from === 0) fretCols.push(0);
+    for (let f = Math.max(1, from); f <= to; f++) fretCols.push(f);
+    for (let i = 0; i < n; i++) {
+      const cy = yString(i);
+      for (const f of fretCols) {
+        const cx = f === 0 ? openCx : xFret(f);
+        parts.push(
+          `<circle class="hit" data-string="${i}" data-fret="${f}" cx="${cx}" cy="${cy}" ` +
+            `r="${hitR}" fill="transparent" style="cursor:pointer"/>`,
+        );
+      }
+    }
   }
 
   const svgOpen =

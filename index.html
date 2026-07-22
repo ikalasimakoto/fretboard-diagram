@@ -83,18 +83,18 @@
         <p class="hint" id="root-hint"></p>
       </section>
 
-      <!-- Board editor -->
-      <section class="panel board-panel" aria-label="Board editor">
-        <h2>Board</h2>
-        <p class="hint">Fretted cell: click cycles empty → note → root → empty. Open column: empty → open → mute → empty.</p>
-        <div id="board-editor" class="board-editor"></div>
+      <!-- Interactive diagram (click to edit) -->
+      <section class="panel board-panel" aria-label="Diagram">
+        <div class="panel-head">
+          <h2>Diagram</h2>
+          <button id="clear-all" type="button" class="ghost">Clear notes</button>
+        </div>
+        <p class="hint">Click the diagram to place notes. Fretted: empty → note → root → empty. Open string: empty → open → root → mute → empty.</p>
+        <div id="preview" class="preview interactive"></div>
       </section>
 
-      <!-- Preview + export -->
-      <section class="panel" aria-label="Preview">
-        <h2>Preview</h2>
-        <div id="preview" class="preview"></div>
-
+      <!-- Export + JSON -->
+      <section class="panel" aria-label="Export">
         <h3>Export</h3>
         <div class="row">
           <label class="field small"><span>Scale</span>

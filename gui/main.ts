@@ -4,8 +4,8 @@
 // drawing logic of its own; everything visual comes from renderSvg().
 
 import { renderSvg } from "../src/render.ts";
-import { pitchClassOf, noteName } from "../src/theory.ts";
-import type { Diagram, Marker } from "../src/types.ts";
+import { pitchClassOf } from "../src/theory.ts";
+import type { Diagram } from "../src/types.ts";
 
 const TUNING_PRESETS: Record<string, string[]> = {
   Standard: ["E2", "A2", "D3", "G3", "B3", "E4"],
@@ -30,19 +30,18 @@ const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getEleme
 
 // ---------- Marker helpers ----------
 
-function findMarker(stringIdx: number, fret: number): Marker | undefined {
-  return state.markers.find((m) => m.string === stringIdx && m.fret === fret);
-}
-
 function cycleMarker(stringIdx: number, fret: number): void {
   const i = state.markers.findIndex((m) => m.string === stringIdx && m.fret === fret);
   const existing = i >= 0 ? state.markers[i] : null;
 
   if (fret === 0) {
-    // empty -> open -> mute -> empty
+    // empty -> open -> open(root) -> mute -> empty
     if (!existing) state.markers.push({ string: stringIdx, fret: 0, type: "open" });
-    else if (existing.type === "open") existing.type = "mute";
-    else state.markers.splice(i, 1);
+    else if (existing.type === "open" && !existing.root) existing.root = true;
+    else if (existing.type === "open" && existing.root) {
+      existing.type = "mute";
+      existing.root = false;
+    } else state.markers.splice(i, 1);
   } else {
     // empty -> note -> root -> empty
     if (!existing) state.markers.push({ string: stringIdx, fret, type: "dot" });
@@ -52,88 +51,21 @@ function cycleMarker(stringIdx: number, fret: number): void {
   renderAll();
 }
 
-// ---------- Board editor ----------
-
-function cellGlyph(m: Marker | undefined): { text: string; cls: string } {
-  if (!m) return { text: "", cls: "" };
-  if (m.type === "mute") return { text: "×", cls: "on" };
-  if (m.type === "open") return { text: "○", cls: "on" };
-  if (m.root) return { text: "◎", cls: "root" };
-  return { text: "●", cls: "on" };
-}
-
-function buildBoardEditor(): void {
-  const n = state.tuning.strings.length;
-  const from = state.frets.from;
-  const to = Math.min(state.frets.to, 24);
-  const showOpen = from === 0;
-
-  const table = document.createElement("table");
-  table.className = "board";
-
-  // Header: fret numbers.
-  const thead = document.createElement("thead");
-  const htr = document.createElement("tr");
-  htr.appendChild(document.createElement("th")); // corner (string label col)
-  if (showOpen) {
-    const th = document.createElement("th");
-    th.textContent = "0";
-    htr.appendChild(th);
-  }
-  for (let f = Math.max(1, from); f <= to; f++) {
-    const th = document.createElement("th");
-    th.textContent = String(f);
-    htr.appendChild(th);
-  }
-  thead.appendChild(htr);
-  table.appendChild(thead);
-
-  // Rows: strings high (top) -> low (bottom).
-  const tbody = document.createElement("tbody");
-  for (let i = n - 1; i >= 0; i--) {
-    const tr = document.createElement("tr");
-    const label = document.createElement("td");
-    label.className = "strlabel";
-    label.textContent = state.tuning.strings[i];
-    tr.appendChild(label);
-
-    const cols: number[] = [];
-    if (showOpen) cols.push(0);
-    for (let f = Math.max(1, from); f <= to; f++) cols.push(f);
-
-    for (const f of cols) {
-      const td = document.createElement("td");
-      const btn = document.createElement("button");
-      btn.type = "button";
-      const g = cellGlyph(findMarker(i, f));
-      btn.className = `cell ${g.cls}`;
-      btn.textContent = g.text;
-      btn.title = `string ${i + 1} (${state.tuning.strings[i]}), fret ${f}`;
-      btn.addEventListener("click", () => cycleMarker(i, f));
-      td.appendChild(btn);
-      tr.appendChild(td);
-    }
-    tbody.appendChild(tr);
-  }
-  table.appendChild(tbody);
-
-  const host = $("board-editor");
-  host.replaceChildren(table);
-}
-
 // ---------- Tuning editor ----------
 
 function buildTuningEditor(): void {
   const host = $("tuning-strings");
   host.replaceChildren();
-  state.tuning.strings.forEach((pitch, idx) => {
+  const n = state.tuning.strings.length;
+  // Show highest string on top (numbered 1) down to the lowest (numbered n).
+  for (let idx = n - 1; idx >= 0; idx--) {
     const row = document.createElement("div");
     row.className = "tstr";
     const label = document.createElement("label");
-    label.textContent = idx === 0 ? "1 (lowest)" : `${idx + 1}`;
+    label.textContent = idx === 0 ? `${n} (lowest)` : `${n - idx}`;
     const input = document.createElement("input");
     input.type = "text";
-    input.value = pitch;
+    input.value = state.tuning.strings[idx];
     input.addEventListener("change", () => {
       try {
         pitchClassOf(input.value); // validate
@@ -145,7 +77,7 @@ function buildTuningEditor(): void {
     });
     row.append(label, input);
     host.appendChild(row);
-  });
+  }
 }
 
 // ---------- Root note dropdown ----------
@@ -194,8 +126,7 @@ function syncControls(): void {
 // ---------- Render everything ----------
 
 function renderAll(): void {
-  $("preview").innerHTML = renderSvg(state);
-  buildBoardEditor();
+  $("preview").innerHTML = renderSvg(state, { interactive: true });
   $<HTMLTextAreaElement>("json").value = JSON.stringify(state, null, 2);
 }
 
@@ -360,6 +291,18 @@ function initControls(): void {
     renderAll();
   });
 
+  // Click the diagram itself to place/cycle notes (delegated to the hit layer).
+  $("preview").addEventListener("click", (e) => {
+    const hit = (e.target as Element).closest?.(".hit");
+    if (!hit) return;
+    cycleMarker(Number(hit.getAttribute("data-string")), Number(hit.getAttribute("data-fret")));
+  });
+
+  $("clear-all").addEventListener("click", () => {
+    state.markers = [];
+    renderAll();
+  });
+
   $("dl-svg").addEventListener("click", downloadSvg);
   $("dl-png").addEventListener("click", () => void downloadRaster("image/png"));
   $("dl-jpg").addEventListener("click", () => void downloadRaster("image/jpeg"));
@@ -407,6 +350,3 @@ buildTuningEditor();
 buildRootValueOptions();
 syncControls();
 renderAll();
-
-// Keep the unused import honest (noteName is exported for future per-note UI).
-void noteName;
