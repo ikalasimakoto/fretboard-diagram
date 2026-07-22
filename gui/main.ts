@@ -141,11 +141,16 @@ function syncControls(): void {
 
 // ---------- Render everything ----------
 
-function renderAll(): void {
+/** Redraw the diagram + JSON only (leaves the group list DOM intact). */
+function renderPreview(): void {
   $("preview").innerHTML = renderSvg(state, { interactive: true });
   if (groupSelect) markSelectedHits();
-  renderGroups();
   $<HTMLTextAreaElement>("json").value = JSON.stringify(state, null, 2);
+}
+
+function renderAll(): void {
+  renderPreview();
+  renderGroups();
 }
 
 /** Replace the working diagram (from JSON paste or the library) and refresh the UI. */
@@ -584,6 +589,9 @@ function createGroupFromSelection(): void {
   exitGroupSelect();
 }
 
+let editingGroupIdx: number | null = null;
+let editingOriginalColor: string | null = null;
+
 function renderGroups(): void {
   const host = $("grp-list");
   host.replaceChildren();
@@ -592,30 +600,66 @@ function renderGroups(): void {
     const row = document.createElement("div");
     row.className = "grp-row";
 
-    const swatch = document.createElement("input");
-    swatch.type = "color";
-    swatch.value = g.color ?? "#2b6cb0";
-    swatch.title = "Outline color";
-    swatch.addEventListener("input", () => {
-      g.color = swatch.value;
-      renderAll();
-    });
-
+    const nn = g.markers.length;
     const label = document.createElement("span");
     label.className = "grp-label";
-    const nn = g.markers.length;
     label.textContent = `Group ${idx + 1} · ${nn} note${nn === 1 ? "" : "s"}`;
 
-    const del = document.createElement("button");
-    del.type = "button";
-    del.className = "ghost danger";
-    del.textContent = "Delete";
-    del.addEventListener("click", () => {
-      state.groups?.splice(idx, 1);
-      renderAll();
-    });
+    if (editingGroupIdx === idx) {
+      // Editing: adjust the color live, commit with OK, revert with Cancel.
+      const picker = document.createElement("input");
+      picker.type = "color";
+      picker.value = g.color ?? "#2b6cb0";
+      picker.className = "grp-picker";
+      picker.addEventListener("input", () => {
+        g.color = picker.value;
+        renderPreview(); // live preview without rebuilding this row
+      });
 
-    row.append(swatch, label, del);
+      const ok = document.createElement("button");
+      ok.type = "button";
+      ok.textContent = "OK";
+      ok.addEventListener("click", () => {
+        editingGroupIdx = null;
+        editingOriginalColor = null;
+        renderAll();
+      });
+
+      const cancel = document.createElement("button");
+      cancel.type = "button";
+      cancel.className = "ghost";
+      cancel.textContent = "Cancel";
+      cancel.addEventListener("click", () => {
+        g.color = editingOriginalColor;
+        editingGroupIdx = null;
+        editingOriginalColor = null;
+        renderAll();
+      });
+
+      row.append(picker, label, ok, cancel);
+    } else {
+      const swatch = document.createElement("button");
+      swatch.type = "button";
+      swatch.className = "grp-swatch";
+      swatch.style.background = g.color ?? "#2b6cb0";
+      swatch.title = "Change outline color";
+      swatch.addEventListener("click", () => {
+        editingGroupIdx = idx;
+        editingOriginalColor = g.color ?? "#2b6cb0";
+        renderAll();
+      });
+
+      const del = document.createElement("button");
+      del.type = "button";
+      del.className = "ghost danger";
+      del.textContent = "Delete";
+      del.addEventListener("click", () => {
+        state.groups?.splice(idx, 1);
+        renderAll();
+      });
+
+      row.append(swatch, label, del);
+    }
     host.appendChild(row);
   });
 }

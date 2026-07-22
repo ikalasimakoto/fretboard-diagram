@@ -93,10 +93,9 @@ export function groupOutlinePath(points: Pt[], pad: number): string {
     normals.push({ x: nx, y: ny });
   }
 
-  // Sweep direction so corner arcs bulge outward: derived from the turn sign.
-  const turn =
-    normals[0].x * normals[1 % h].y - normals[0].y * normals[1 % h].x;
-  const sweep = turn <= 0 ? 1 : 0;
+  // convexHull() always returns vertices in a fixed winding, so a constant
+  // sweep makes every corner arc bulge outward (around the vertex), never cave in.
+  const sweep = 1;
 
   let d = "";
   for (let i = 0; i < h; i++) {
