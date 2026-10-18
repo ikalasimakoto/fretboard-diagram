@@ -5,7 +5,7 @@
 
 import { renderSvg } from "../src/render.ts";
 import { pitchClassOf, DEFAULT_INTERVALS } from "../src/theory.ts";
-import type { Diagram, NotationConfig } from "../src/types.ts";
+import type { Diagram, NotationConfig, Tuning } from "../src/types.ts";
 import {
   listLibrary,
   saveLibrary,
@@ -14,11 +14,15 @@ import {
   type StoredDiagram,
 } from "./library.ts";
 
-const TUNING_PRESETS: Record<string, string[]> = {
-  Standard: ["E2", "A2", "D3", "G3", "B3", "E4"],
-  FACGCE: ["F2", "A2", "C3", "G3", "C4", "E4"],
-  "7-string all-4ths": ["E1", "A1", "D2", "G2", "C3", "F3", "Bb3"],
-};
+// Standard tuning is always present and cannot be deleted.
+const STANDARD_TUNING: Tuning = { name: "Standard", strings: ["E2", "A2", "D3", "G3", "B3", "E4"] };
+// Deletable built-in templates; also seed an empty on-disk template store.
+const BUILTIN_TEMPLATES: Tuning[] = [
+  { name: "FACGCE", strings: ["F2", "A2", "C3", "G3", "C4", "E4"] },
+  { name: "7-string all-4ths", strings: ["E1", "A1", "D2", "G2", "C3", "F3", "Bb3"] },
+];
+// User-editable templates (loaded from / saved to disk); starts as the built-ins.
+let customTunings: Tuning[] = BUILTIN_TEMPLATES.map((t) => ({ name: t.name, strings: [...t.strings] }));
 
 const PITCH_CLASSES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 const FLAT_NAMES = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
@@ -42,7 +46,7 @@ function displayNoteName(pc: number): string {
 const state: Diagram = {
   version: 1,
   meta: { title: "", tags: [] },
-  tuning: { name: "Standard", strings: [...TUNING_PRESETS.Standard] },
+  tuning: { name: STANDARD_TUNING.name, strings: [...STANDARD_TUNING.strings] },
   frets: { from: 0, to: 4, showFretNumber: true, showInlay: true },
   capo: null,
   root: { mode: "pitchClass", value: "C" },
@@ -103,6 +107,7 @@ function buildTuningEditor(): void {
       try {
         pitchClassOf(input.value); // validate
         state.tuning.strings[idx] = input.value.trim();
+        matchPresetToState();
         renderAll();
       } catch {
         input.value = state.tuning.strings[idx]; // revert
@@ -111,6 +116,84 @@ function buildTuningEditor(): void {
     row.append(label, input);
     host.appendChild(row);
   }
+}
+
+// ---------- Tuning templates (presets) ----------
+
+const allTemplates = (): Tuning[] => [STANDARD_TUNING, ...customTunings];
+
+/** Rebuild the preset dropdown from Standard + custom templates + "Custom". */
+function buildTuningPresetOptions(selected?: string): void {
+  const sel = $<HTMLSelectElement>("tuning-preset");
+  const keep = selected ?? sel.value;
+  sel.replaceChildren();
+  for (const t of allTemplates()) {
+    const o = document.createElement("option");
+    o.value = t.name;
+    o.textContent = t.name;
+    sel.appendChild(o);
+  }
+  const custom = document.createElement("option");
+  custom.value = "__custom__";
+  custom.textContent = "Custom";
+  sel.appendChild(custom);
+  sel.value = [...sel.options].some((o) => o.value === keep) ? keep : "__custom__";
+  updateTemplateButtons();
+}
+
+/** Select the template that matches the current tuning exactly, else "Custom". */
+function matchPresetToState(): void {
+  const cur = state.tuning;
+  const match = allTemplates().find(
+    (t) =>
+      t.name === cur.name &&
+      t.strings.length === cur.strings.length &&
+      t.strings.every((s, i) => s === cur.strings[i]),
+  );
+  $<HTMLSelectElement>("tuning-preset").value = match ? match.name : "__custom__";
+  updateTemplateButtons();
+}
+
+function updateTemplateButtons(): void {
+  const sel = $<HTMLSelectElement>("tuning-preset").value;
+  const name = state.tuning.name.trim();
+  // Can't save an unnamed tuning or overwrite the reserved "Standard".
+  $<HTMLButtonElement>("tpl-add").disabled = name === "" || name === "Standard";
+  // Can only remove a saved (non-Standard) template that is currently selected.
+  $<HTMLButtonElement>("tpl-remove").disabled = sel === "__custom__" || sel === "Standard";
+}
+
+function setTuningStatus(msg: string): void {
+  $("tuning-status").textContent = msg;
+}
+
+async function saveTunings(): Promise<void> {
+  try {
+    await fetch("/api/tunings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(customTunings),
+    });
+  } catch {
+    /* no dev server (e.g. static build) — keep templates in memory only */
+  }
+}
+
+async function loadTunings(): Promise<void> {
+  try {
+    const list = (await (await fetch("/api/tunings")).json()) as Tuning[];
+    if (Array.isArray(list) && list.length > 0) {
+      customTunings = list;
+    } else {
+      // First run: seed the store with the built-in templates.
+      customTunings = BUILTIN_TEMPLATES.map((t) => ({ name: t.name, strings: [...t.strings] }));
+      await saveTunings();
+    }
+  } catch {
+    /* no dev server — keep the built-in templates already in memory */
+  }
+  buildTuningPresetOptions();
+  matchPresetToState();
 }
 
 // ---------- Root note dropdown ----------
@@ -331,6 +414,7 @@ function loadDiagram(d: Diagram): void {
   buildPerNote();
   buildIntervalLabels();
   syncControls();
+  matchPresetToState();
   renderAll();
 }
 
@@ -388,31 +472,43 @@ async function downloadRaster(type: "image/png" | "image/jpeg"): Promise<void> {
 // ---------- Wire up controls ----------
 
 function initControls(): void {
-  // Tuning preset dropdown.
+  // Tuning preset dropdown (templates).
   const presetSel = $<HTMLSelectElement>("tuning-preset");
-  presetSel.replaceChildren();
-  for (const name of Object.keys(TUNING_PRESETS)) {
-    const o = document.createElement("option");
-    o.value = name;
-    o.textContent = name;
-    presetSel.appendChild(o);
-  }
-  const custom = document.createElement("option");
-  custom.value = "__custom__";
-  custom.textContent = "Custom";
-  presetSel.appendChild(custom);
-  presetSel.value = "Standard";
+  buildTuningPresetOptions("Standard");
 
   presetSel.addEventListener("change", () => {
     const name = presetSel.value;
-    if (name !== "__custom__") {
-      state.tuning.name = name;
-      state.tuning.strings = [...TUNING_PRESETS[name]];
-      state.markers = [];
-      buildTuningEditor();
-      syncControls();
-      renderAll();
-    }
+    updateTemplateButtons();
+    if (name === "__custom__") return;
+    const t = allTemplates().find((x) => x.name === name);
+    if (!t) return;
+    state.tuning.name = t.name;
+    state.tuning.strings = [...t.strings];
+    state.markers = [];
+    buildTuningEditor();
+    syncControls();
+    renderAll();
+  });
+
+  $("tpl-add").addEventListener("click", () => {
+    const name = state.tuning.name.trim();
+    if (!name || name === "Standard") return;
+    const strings = [...state.tuning.strings];
+    const i = customTunings.findIndex((t) => t.name === name);
+    if (i >= 0) customTunings[i] = { name, strings };
+    else customTunings.push({ name, strings });
+    void saveTunings();
+    buildTuningPresetOptions(name);
+    setTuningStatus(`Saved template “${name}”.`);
+  });
+
+  $("tpl-remove").addEventListener("click", () => {
+    const name = presetSel.value;
+    if (name === "__custom__" || name === "Standard") return;
+    customTunings = customTunings.filter((t) => t.name !== name);
+    void saveTunings();
+    buildTuningPresetOptions("__custom__");
+    setTuningStatus(`Removed template “${name}”.`);
   });
 
   $<HTMLInputElement>("title").addEventListener("input", (e) => {
@@ -426,14 +522,15 @@ function initControls(): void {
   });
   $<HTMLInputElement>("tuning-name").addEventListener("input", (e) => {
     state.tuning.name = (e.target as HTMLInputElement).value;
+    matchPresetToState();
     renderAll();
   });
 
   $("add-string").addEventListener("click", () => {
     const last = state.tuning.strings[state.tuning.strings.length - 1] ?? "E4";
     state.tuning.strings.push(last);
-    presetSel.value = "__custom__";
     buildTuningEditor();
+    matchPresetToState();
     renderAll();
   });
   $("remove-string").addEventListener("click", () => {
@@ -441,8 +538,8 @@ function initControls(): void {
     const removed = state.tuning.strings.length - 1;
     state.tuning.strings.pop();
     state.markers = state.markers.filter((m) => m.string !== removed);
-    presetSel.value = "__custom__";
     buildTuningEditor();
+    matchPresetToState();
     renderAll();
   });
 
@@ -862,3 +959,4 @@ buildPerNote();
 buildIntervalLabels();
 syncControls();
 renderAll();
+void loadTunings();

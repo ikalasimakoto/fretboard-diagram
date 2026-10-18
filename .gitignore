@@ -5,3 +5,6 @@ out/
 # Saved diagrams are personal by default; keep the folder, ignore its contents.
 # Remove this rule if you want to version your library.
 library/*.json
+
+# Personal tuning templates; keep the folder, ignore its contents.
+config/*.json

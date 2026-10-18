@@ -6,7 +6,7 @@ one headlessly from a JSON spec (e.g. by an AI).
 
 ## Features
 
-- Any tuning and string count (presets: Standard, FACGCE, 7‑string all‑fourths) — the tuning is printed on the image.
+- Any tuning and string count — the tuning is printed on the image. Tuning templates (Standard plus your own) can be added and removed; Standard is kept.
 - Adjustable fret window up to 24; nut shown as a double line, with the strings overhanging to the left when the nut is off‑screen.
 - Notes as filled dots, open strings as rings, mutes as ×, capo as a bar.
 - Root emphasis (double ring), either by pitch class or by a marked position.
@@ -44,10 +44,12 @@ Labels, Root, …) are collapsible to keep the panel short.
 
 ### Tuning, frets, capo
 
-Pick a preset or edit each string's pitch (scientific pitch notation, e.g.
-`E2`); strings are listed high → low (string 1 = highest). Set the fret window
-with **From/To**, toggle fret number and inlays, and set a **Capo** (0 = none).
-With a capo, open‑string markers behind it are hidden.
+Pick a template or edit each string's pitch (scientific pitch notation, e.g.
+`E2`); strings are listed high → low (string 1 = highest). **Add to templates**
+saves the current tuning (by its name) as a reusable template; **Remove from
+templates** deletes the selected one. Standard cannot be removed. Set the fret
+window with **From/To**, toggle fret number and inlays, and set a **Capo**
+(0 = none). With a capo, open‑string markers behind it are hidden.
 
 ### Labels and root
 
@@ -121,12 +123,14 @@ src/            rendering core (types, theory, group geometry, render, index)
 gui/            web editor (main.ts, library client, styles)
 examples/       sample specs + a render script
 library/        saved diagrams (*.json, gitignored; folder kept via .gitkeep)
-vite.config.ts  dev server + the library file API
+config/         tuning templates (tunings.json, gitignored; folder kept via .gitkeep)
+vite.config.ts  dev server + the library and tunings file APIs
 ```
 
-The library is persisted on disk by a small dev‑server API in `vite.config.ts`
-(GET/PUT/DELETE `/api/library`). Saved diagrams (`library/*.json`) are
-**gitignored by default** so personal work stays local; remove that line in
+The library and the tuning templates are persisted on disk by small dev‑server
+APIs in `vite.config.ts` (GET/PUT/DELETE `/api/library`, GET/PUT `/api/tunings`).
+Saved diagrams (`library/*.json`) and tuning templates (`config/tunings.json`)
+are **gitignored by default** so personal work stays local; remove those lines in
 `.gitignore` if you want to version them.
 
 ## Development

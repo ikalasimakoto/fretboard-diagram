@@ -85,6 +85,50 @@ function libraryApi(): Plugin {
   };
 }
 
+// Dev-server API that persists the user's tuning templates as a single JSON
+// file (./config/tunings.json): an array of { name, strings }. Same rationale as
+// the library — durable on disk, not trapped in browser storage.
+function tuningsApi(): Plugin {
+  const dir = join(process.cwd(), "config");
+  const file = join(dir, "tunings.json");
+
+  return {
+    name: "fretboard-tunings-api",
+    configureServer(server) {
+      if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+
+      server.middlewares.use(async (req, res, next) => {
+        const pathname = (req.url ?? "").split("?")[0];
+        if (pathname !== "/api/tunings") return next();
+
+        const send = (code: number, body?: unknown) => {
+          res.statusCode = code;
+          if (body === undefined) return res.end();
+          res.setHeader("Content-Type", "application/json");
+          res.end(JSON.stringify(body));
+        };
+
+        try {
+          if (req.method === "GET") {
+            const list = existsSync(file) ? JSON.parse(readFileSync(file, "utf8")) : [];
+            return send(200, list);
+          }
+          if (req.method === "PUT") {
+            let body = "";
+            for await (const chunk of req) body += chunk;
+            const list = JSON.parse(body);
+            writeFileSync(file, JSON.stringify(list, null, 2));
+            return send(200, list);
+          }
+          return send(405, { error: "method not allowed" });
+        } catch (err) {
+          return send(500, { error: String(err) });
+        }
+      });
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [libraryApi()],
+  plugins: [libraryApi(), tuningsApi()],
 });
