@@ -4,7 +4,7 @@ Guitar fretboard (指板図) diagram generator — for practice and for Note / X
 articles and video assets. Build a diagram in a local web editor, or generate
 one headlessly from a JSON spec (e.g. by an AI).
 
-Live (static version): https://macotoikarashi.github.io/fretboard-diagram/ —
+Live (static version): https://ikalasimakoto.github.io/fretboard-diagram/ —
 rebuilt and published by GitHub Actions on every push to `main`.
 
 ## Features
