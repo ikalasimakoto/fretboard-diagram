@@ -986,6 +986,11 @@ function seedExample(): void {
     { string: 4, fret: 1 },
     { string: 5, fret: 0, type: "open" },
     { string: 5, fret: 1 },
+    { string: 4, fret: 0, type: "open" },
+    { string: 3, fret: 0, type: "open" },
+    { string: 3, fret: 2, type: "dot" },
+    { string: 4, fret: 3, type: "dot" },
+    { string: 5, fret: 3, type: "dot" },
   ];
 }
 
