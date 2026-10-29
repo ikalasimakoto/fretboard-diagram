@@ -163,3 +163,25 @@ npm run preview     # serve the production build
 ## Roadmap
 
 - Vertical layout option (the data spec is already orientation‑neutral).
+
+## License and use / ライセンスと利用について
+
+- **Images you make with fretboard-diagram** (circles, diagrams, exports) are free to use
+  anywhere — blogs, videos, teaching material, paid articles, monetized videos
+  and other commercial work. No permission or credit is needed; it's nice to
+  hear when you use it, but that's optional.
+- **The source code** is under the [MIT License](LICENSE): use, modify and
+  redistribute it freely, keeping the copyright and license notice in copies of
+  the code.
+- No warranty: the analysis may contain mistakes, and data saved in the browser
+  can be lost — keep a copy with Export.
+
+日本語：このアプリで作った画像は、ブログ・動画・教材・有料記事・収益化した動画など、
+商用を含めて自由に使えます。連絡もクレジット表記も不要です（使ったら教えてもらえると
+嬉しいです）。ソースコードは MIT ライセンスです。内容の正確さは保証しません。ブラウザに
+保存したデータは消えることがあるので、Export で控えを取ってください。
+
+## Author
+
+Made by **ikalasimakoto**, who makes music as **dadzijuwha** (a solo project).
+Music and links: https://linktr.ee/dadzijuwha
