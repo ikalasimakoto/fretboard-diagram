@@ -991,6 +991,7 @@ function seedExample(): void {
     { string: 3, fret: 2, type: "dot" },
     { string: 4, fret: 3, type: "dot" },
     { string: 5, fret: 3, type: "dot" },
+    { string: 2, fret: 3, type: "dot" },
   ];
 }
 
