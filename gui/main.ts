@@ -10,7 +10,10 @@ import {
   listLibrary,
   saveLibrary,
   deleteLibrary,
+  loadTunings as loadStoredTunings,
+  saveTunings as saveStoredTunings,
   makeId,
+  STORAGE,
   type StoredDiagram,
 } from "./library.ts";
 
@@ -169,19 +172,15 @@ function setTuningStatus(msg: string): void {
 
 async function saveTunings(): Promise<void> {
   try {
-    await fetch("/api/tunings", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(customTunings),
-    });
-  } catch {
-    /* no dev server (e.g. static build) — keep templates in memory only */
+    await saveStoredTunings(customTunings);
+  } catch (err) {
+    setTuningStatus(`Saving templates failed: ${(err as Error).message}`);
   }
 }
 
 async function loadTunings(): Promise<void> {
   try {
-    const list = (await (await fetch("/api/tunings")).json()) as Tuning[];
+    const list = await loadStoredTunings();
     if (Array.isArray(list) && list.length > 0) {
       customTunings = list;
     } else {
@@ -190,7 +189,7 @@ async function loadTunings(): Promise<void> {
       await saveTunings();
     }
   } catch {
-    /* no dev server — keep the built-in templates already in memory */
+    /* storage unavailable — keep the built-in templates already in memory */
   }
   buildTuningPresetOptions();
   matchPresetToState();
@@ -743,7 +742,9 @@ async function reloadLibrary(): Promise<void> {
     libraryCache = await listLibrary();
     renderLibrary();
   } catch {
-    setStatus("Library API unavailable (run with `npm run dev`).");
+    setStatus(
+      STORAGE === "files" ? "Library API unavailable (run with `npm run dev`)." : "Browser storage unavailable.",
+    );
   }
 }
 
@@ -751,7 +752,44 @@ function setStatus(msg: string): void {
   $("lib-status").textContent = msg;
 }
 
+const STORAGE_NOTE =
+  STORAGE === "files"
+    ? "Saved diagrams are stored as JSON files in library/."
+    : "Saved diagrams are kept in this browser only. Use Export / Import to move them to another device.";
+
+function exportLibrary(): void {
+  const json = JSON.stringify(libraryCache, null, 2);
+  const stamp = new Date().toISOString().slice(0, 10);
+  downloadBlob(new Blob([json], { type: "application/json" }), `fretboard-library-${stamp}.json`);
+}
+
+/** Add diagrams from an exported file; an entry with the same id replaces the saved one. */
+async function importLibrary(file: File): Promise<void> {
+  try {
+    const data = JSON.parse(await file.text());
+    const items: StoredDiagram[] = Array.isArray(data) ? data : [data];
+    let n = 0;
+    for (const it of items) {
+      if (!it || typeof it.id !== "string" || !it.diagram || !/^[A-Za-z0-9_-]+$/.test(it.id)) continue;
+      await saveLibrary(it.id, it.diagram, it.createdAt);
+      n++;
+    }
+    await reloadLibrary();
+    setStatus(`Imported ${n} diagram${n === 1 ? "" : "s"}.`);
+  } catch (err) {
+    setStatus(`Import failed: ${(err as Error).message}`);
+  }
+}
+
 function initLibrary(): void {
+  setStatus(STORAGE_NOTE);
+  $("lib-export").addEventListener("click", exportLibrary);
+  $("lib-import").addEventListener("click", () => $("lib-import-file").click());
+  $<HTMLInputElement>("lib-import-file").addEventListener("change", (e) => {
+    const input = e.target as HTMLInputElement;
+    if (input.files?.[0]) void importLibrary(input.files[0]);
+    input.value = "";
+  });
   $("lib-search").addEventListener("input", renderLibrary);
   $("lib-sort").addEventListener("change", renderLibrary);
 

@@ -4,6 +4,9 @@ Guitar fretboard (指板図) diagram generator — for practice and for Note / X
 articles and video assets. Build a diagram in a local web editor, or generate
 one headlessly from a JSON spec (e.g. by an AI).
 
+Live (static version): https://macotoikarashi.github.io/fretboard-diagram/ —
+rebuilt and published by GitHub Actions on every push to `main`.
+
 ## Features
 
 - Any tuning and string count — the tuning is printed on the image. Tuning templates (Standard plus your own) can be added and removed; Standard is kept.
@@ -14,7 +17,7 @@ one headlessly from a JSON spec (e.g. by an AI).
 - Per‑note colors, plus group outlines that enclose a set of notes (chord/position shapes).
 - Inlays at 3/5/7/9/15/17/19/21 and double at 12/24.
 - Export to SVG / PNG / JPEG at 1×/2×/4×.
-- Diagram library on disk: save, tag, filter, and recall.
+- Diagram library: save, tag, filter, and recall (on disk with `npm run dev`, in the browser on the static site), with JSON export/import.
 
 ## Getting started
 
@@ -76,6 +79,9 @@ and JPEG are rasterized at the chosen scale (JPEG on a white background).
 Cards show a thumbnail, title, and tags — **filter** with comma‑separated terms
 (all must match), **sort** by updated / created / name, and **Load** or
 **Delete**. Diagrams are saved as JSON files under `library/` (see below).
+**Export library (JSON)** writes every saved diagram to one file; **Import…**
+adds the diagrams from such a file (an entry with the same id replaces the
+saved one).
 
 ## Headless / AI use
 
@@ -120,7 +126,7 @@ SVG is the primary output: vector, crisp at any size, and easy to rasterize.
 
 ```
 src/            rendering core (types, theory, group geometry, render, index)
-gui/            web editor (main.ts, library client, styles)
+gui/            web editor (main.ts, storage client for files or browser, styles)
 examples/       sample specs + a render script
 library/        saved diagrams (*.json, gitignored; folder kept via .gitkeep)
 config/         tuning templates (tunings.json, gitignored; folder kept via .gitkeep)
@@ -132,6 +138,19 @@ APIs in `vite.config.ts` (GET/PUT/DELETE `/api/library`, GET/PUT `/api/tunings`)
 Saved diagrams (`library/*.json`) and tuning templates (`config/tunings.json`)
 are **gitignored by default** so personal work stays local; remove those lines in
 `.gitignore` if you want to version them.
+
+## Static build (no server)
+
+```bash
+npm run build   # writes dist/, which any static host can serve
+```
+
+The static build has no dev server, so saved diagrams and tuning templates live
+in the browser's localStorage instead of `library/` and `config/`. Each browser
+keeps its own copy; **Export library (JSON)** and **Import…** move diagrams
+between devices (and between the static site and the Mac's `library/`). Asset
+paths are relative, so `dist/` works under a sub-path such as GitHub Pages'
+`/fretboard-diagram/`.
 
 ## Development
 

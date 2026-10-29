@@ -168,6 +168,11 @@
             <button id="lib-save-new" type="button" class="ghost">Save as new</button>
           </div>
         </div>
+        <div class="row lib-io">
+          <button id="lib-export" type="button" class="ghost">Export library (JSON)</button>
+          <button id="lib-import" type="button" class="ghost">Import…</button>
+          <input id="lib-import-file" type="file" accept="application/json,.json" hidden />
+        </div>
         <div class="lib-controls">
           <input id="lib-search" type="search" placeholder="Filter — comma-separated terms, all must match" />
           <label class="field small lib-sort">
@@ -180,7 +185,7 @@
           </label>
         </div>
         <div id="lib-list" class="lib-list"></div>
-        <p class="hint" id="lib-status">Saved diagrams are stored as JSON files in <code>library/</code>.</p>
+        <p class="hint" id="lib-status"></p>
       </section>
     </main>
 

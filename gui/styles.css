@@ -201,3 +201,5 @@ table.board td { padding: 0; text-align: center; }
 .lib-actions button { padding: 5px 10px; font-size: 12px; }
 button.danger { background: #fff; color: var(--accent); border-color: #e6c9c5; }
 button.danger:hover { border-color: var(--accent); filter: none; }
+
+.lib-io { margin: 0 0 10px; flex-wrap: wrap; }

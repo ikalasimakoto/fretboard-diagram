@@ -8,3 +8,6 @@ library/*.json
 
 # Personal tuning templates; keep the folder, ignore its contents.
 config/*.json
+
+# Static build output
+dist/

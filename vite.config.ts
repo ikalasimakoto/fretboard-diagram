@@ -130,5 +130,8 @@ function tuningsApi(): Plugin {
 }
 
 export default defineConfig({
+  // Relative asset paths, so the static build also works under a sub-path
+  // such as GitHub Pages' /fretboard-diagram/.
+  base: "./",
   plugins: [libraryApi(), tuningsApi()],
 });
